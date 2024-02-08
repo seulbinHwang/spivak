@@ -32,9 +32,8 @@ InputShape = Tuple[int, int, int]
 
 class Dataset:
 
-    def __init__(
-            self, video_data: List["VideoDatum"], input_shape: InputShape,
-            num_classes_from_task: Dict[Task, int]) -> None:
+    def __init__(self, video_data: List["VideoDatum"], input_shape: InputShape,
+                 num_classes_from_task: Dict[Task, int]) -> None:
         self.video_data = video_data
         self.input_shape = input_shape
         self.tasks = list(num_classes_from_task.keys())
@@ -90,19 +89,18 @@ class VideoDatum(metaclass=ABCMeta):
 
 
 class DefaultVideoDatum(VideoDatum):
-
     """This caches the labels, but not the features. This should work well
     for most use-cases."""
 
-    def __init__(
-            self, features_path: Path, relative_path: Path,
-            labels_from_task: LabelsFromTaskDict, num_frames: int) -> None:
+    def __init__(self, features_path: Path, relative_path: Path,
+                 labels_from_task: LabelsFromTaskDict, num_frames: int) -> None:
         self._features_path = features_path
         self._relative_path = relative_path
         self._labels_from_task = labels_from_task
         self._num_classes_from_task = {
             task: task_labels[INDEX_LABELS].shape[1]
-            for task, task_labels in labels_from_task.items()}
+            for task, task_labels in labels_from_task.items()
+        }
         self._num_frames = num_frames
 
     def labels(self, task: Task) -> Optional[np.ndarray]:

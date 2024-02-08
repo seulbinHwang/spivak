@@ -28,8 +28,8 @@ class VideoStartProviderInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_num_chunks_dataset_float(
-            self, video_data: List[VideoDatum]) -> float:
+    def get_num_chunks_dataset_float(self,
+                                     video_data: List[VideoDatum]) -> float:
         """Iterate over labels for all videos and accumulate the number of
         chunks that will be produced for them."""
         pass
@@ -37,20 +37,18 @@ class VideoStartProviderInterface(metaclass=ABCMeta):
 
 class VideoStartProviderUniform(VideoStartProviderInterface):
 
-    def __init__(
-            self, chunks_per_minute: float, min_valid_chunk_frames: int,
-            frame_rate: float, task: Task) -> None:
+    def __init__(self, chunks_per_minute: float, min_valid_chunk_frames: int,
+                 frame_rate: float, task: Task) -> None:
         self._chunks_per_minute = chunks_per_minute
         self._min_valid_chunk_frames = min_valid_chunk_frames
         self._frame_rate = frame_rate
         self._task = task
 
-    def get_num_chunks_dataset_float(
-            self, video_data: List[VideoDatum]) -> float:
+    def get_num_chunks_dataset_float(self,
+                                     video_data: List[VideoDatum]) -> float:
         num_chunks_float_per_video = [
-            _compute_num_chunks_float(
-                self._frame_rate, video_datum.num_frames,
-                self._chunks_per_minute)
+            _compute_num_chunks_float(self._frame_rate, video_datum.num_frames,
+                                      self._chunks_per_minute)
             for video_datum in video_data
             if video_datum.valid_labels(self._task)
         ]
@@ -67,8 +65,9 @@ class VideoStartProviderUniform(VideoStartProviderInterface):
         # maxval - 1, so we add 1 to start_end below.
         start_end = tf.maximum(
             0, num_video_frames - self._min_valid_chunk_frames) + 1
-        return tf.random.uniform(
-            shape=[num_chunks], maxval=start_end, dtype=tf.int32)
+        return tf.random.uniform(shape=[num_chunks],
+                                 maxval=start_end,
+                                 dtype=tf.int32)
 
 
 class VideoStartProviderWeighted(VideoStartProviderInterface):
@@ -80,27 +79,25 @@ class VideoStartProviderWeighted(VideoStartProviderInterface):
         self._frame_rate = frame_rate
         self._start_probabilities_creator = start_probabilities_creator
 
-    def get_num_chunks_dataset_float(
-            self, video_data: List[VideoDatum]) -> float:
+    def get_num_chunks_dataset_float(self,
+                                     video_data: List[VideoDatum]) -> float:
         return sum(
-            _compute_num_chunks_float(
-                self._frame_rate, video_datum.num_frames,
-                self._chunks_per_minute)
-            for video_datum in video_data
-        )
+            _compute_num_chunks_float(self._frame_rate, video_datum.num_frames,
+                                      self._chunks_per_minute)
+            for video_datum in video_data)
 
     def create_tf_starts(
             self, video_labels_from_task: LabelsFromTaskDict) -> tf.Tensor:
         return self._tf_get_starts(
-            self._tf_get_start_probabilities(video_labels_from_task)
-        )
+            self._tf_get_start_probabilities(video_labels_from_task))
 
-    def _tf_get_start_probabilities(
-            self, video_labels_from_task: LabelsFromTaskDict):
+    def _tf_get_start_probabilities(self,
+                                    video_labels_from_task: LabelsFromTaskDict):
         # This function was designed to only be used with the spotting labels.
         video_labels = video_labels_from_task[Task.SPOTTING]
         video_start_probabilities = tf.py_function(
-            func=self._video_start_probabilities, inp=[video_labels],
+            func=self._video_start_probabilities,
+            inp=[video_labels],
             Tout=tf.float32)
         # Can't return the Categorical distribution here, since the dataset
         # doesn't support it (I think it only supports tensors).
@@ -111,8 +108,8 @@ class VideoStartProviderWeighted(VideoStartProviderInterface):
 
     def _tf_get_starts(self, video_start_probabilities) -> tf.Tensor:
         num_video_frames = tf.shape(video_start_probabilities)[0]
-        num_chunks = _tf_sample_num_chunks(
-            self._frame_rate, num_video_frames, self._chunks_per_minute)
+        num_chunks = _tf_sample_num_chunks(self._frame_rate, num_video_frames,
+                                           self._chunks_per_minute)
         distribution = tfp.distributions.Categorical(
             probs=video_start_probabilities)
         return distribution.sample(num_chunks)
@@ -120,33 +117,32 @@ class VideoStartProviderWeighted(VideoStartProviderInterface):
 
 class StartProbabilitiesCreator:
 
-    def __init__(
-            self, num_chunk_frames: int, min_valid_chunk_frames: int,
-            negative_fraction: float) -> None:
+    def __init__(self, num_chunk_frames: int, min_valid_chunk_frames: int,
+                 negative_fraction: float) -> None:
         self._num_chunk_frames = num_chunk_frames
         self._min_valid_chunk_frames = min_valid_chunk_frames
         self._negative_fraction = negative_fraction
 
     def create(self, video_labels: np.ndarray):
-        return _create_start_probabilities(
-            video_labels, self._num_chunk_frames, self._min_valid_chunk_frames,
-            self._negative_fraction)
+        return _create_start_probabilities(video_labels, self._num_chunk_frames,
+                                           self._min_valid_chunk_frames,
+                                           self._negative_fraction)
 
 
-def compute_min_valid_chunk_frames(
-        video_data: List[VideoDatum], frame_rate: float,
-        min_valid_chunk_duration: int):
+def compute_min_valid_chunk_frames(video_data: List[VideoDatum],
+                                   frame_rate: float,
+                                   min_valid_chunk_duration: int):
     min_valid_chunk_frames = math.floor(frame_rate * min_valid_chunk_duration)
     _check_min_valid_chunk_frames(video_data, min_valid_chunk_frames)
     return min_valid_chunk_frames
 
 
-def _check_min_valid_chunk_frames(
-        video_data: List[VideoDatum], min_valid_chunk_frames: int) -> None:
+def _check_min_valid_chunk_frames(video_data: List[VideoDatum],
+                                  min_valid_chunk_frames: int) -> None:
     min_num_video_frames = min(
         video_datum.num_frames for video_datum in video_data)
-    if (min_num_video_frames <
-            MIN_VALID_CHUNK_FRAMES_WARNING_MULTIPLIER * min_valid_chunk_frames):
+    if (min_num_video_frames < MIN_VALID_CHUNK_FRAMES_WARNING_MULTIPLIER *
+            min_valid_chunk_frames):
         logging.error(
             f"Dataset contains a video with {min_num_video_frames} frames. "
             f"The minimum frames set for a training chunk is "
@@ -155,8 +151,8 @@ def _check_min_valid_chunk_frames(
             f"in the test set.")
 
 
-def _compute_num_chunks_float(
-        frame_rate: float, num_frames: int, chunks_per_minute: float) -> float:
+def _compute_num_chunks_float(frame_rate: float, num_frames: int,
+                              chunks_per_minute: float) -> float:
     num_seconds = num_frames / frame_rate
     chunks_per_second = chunks_per_minute / SECONDS_IN_A_MINUTE
     return num_seconds * chunks_per_second
@@ -174,9 +170,9 @@ def _tf_sample_num_chunks(frame_rate, n_video_frames, chunks_per_minute):
     return tf.cast(whole, dtype=tf.int32) + tf.cast(additional, dtype=tf.int32)
 
 
-def _create_start_probabilities(
-        labels, num_chunk_frames: int, min_valid_chunk_frames: int,
-        negative_fraction: float):
+def _create_start_probabilities(labels, num_chunk_frames: int,
+                                min_valid_chunk_frames: int,
+                                negative_fraction: float):
     # In general, for unbalanced classes, there is some benefit in doing
     # oversampling of minority classes. (See for example, "A systematic
     # study of the class imbalance problem in convolutional neural
@@ -206,12 +202,9 @@ def _create_start_probabilities(
         # For each labeled frame, add weights to start_weights within a window
         # where a chunk that contains the frame in its center (accounting for
         # slack from the border due to the receptive field) may start.
-        begin = min(
-            num_valid_starts - 1,
-            max(0, labeled_frame - num_chunk_frames + 1)
-        )
-        end = min(
-            num_valid_starts, max(1, labeled_frame + 1))
+        begin = min(num_valid_starts - 1,
+                    max(0, labeled_frame - num_chunk_frames + 1))
+        end = min(num_valid_starts, max(1, labeled_frame + 1))
         span_size = end - begin
         label_count = label_counts[labeled_frame]
         start_weights[begin:end] += label_count / span_size

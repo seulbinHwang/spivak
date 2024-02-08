@@ -45,7 +45,8 @@ V2_CHALLENGE_VALIDATION_GAMES_JSONS = {
 }
 V2_CHALLENGE_GAMES_JSONS = {
     SPLIT_KEY_TRAIN: [
-        V2_GAMES_JSON_TRAIN, V2_GAMES_JSON_VALIDATION, V2_GAMES_JSON_TEST],
+        V2_GAMES_JSON_TRAIN, V2_GAMES_JSON_VALIDATION, V2_GAMES_JSON_TEST
+    ],
     SPLIT_KEY_UNLABELED: [V2_GAMES_JSON_CHALLENGE]
 }
 V2_CAMERA_SEGMENTATION_GAMES_JSONS = {
@@ -55,19 +56,20 @@ V2_CAMERA_SEGMENTATION_GAMES_JSONS = {
     SPLIT_KEY_UNLABELED: ["SoccerNetCameraChangesChallenge.json"],
 }
 V2_SPOTTING_AND_CAMERA_SEGMENTATION_GAMES_CSVS = [
-    "SoccerNetSpottingAndCameraChangesLarge.csv"]
+    "SoccerNetSpottingAndCameraChangesLarge.csv"
+]
 GAMES_CSV_COLUMN_GAME = "DIRECTORY"
 GAMES_CSV_COLUMN_SPLIT_KEY = "SPLIT"
 V1_SPLIT_KEYS = {SPLIT_KEY_TRAIN, SPLIT_KEY_VALIDATION, SPLIT_KEY_TEST}
 V2_SPOTTING_AND_CAMERA_SEGMENTATION_SPLIT_KEYS = {
-    SPLIT_KEY_TRAIN, SPLIT_KEY_VALIDATION, SPLIT_KEY_TEST}
+    SPLIT_KEY_TRAIN, SPLIT_KEY_VALIDATION, SPLIT_KEY_TEST
+}
 
 
 class SoccerNetReader:
 
-    def __init__(
-            self, soccernet_video_data_reader: "SoccerNetVideoDataReader",
-            num_chunk_frames: int) -> None:
+    def __init__(self, soccernet_video_data_reader: "SoccerNetVideoDataReader",
+                 num_chunk_frames: int) -> None:
         self._soccernet_video_data_reader = soccernet_video_data_reader
         self._num_chunk_frames = num_chunk_frames
 
@@ -83,9 +85,8 @@ class SoccerNetReader:
 
 class SoccerNetVideoDataReader:
 
-    def __init__(
-            self, game_label_reader: "GameLabelsFromTaskDictReader",
-            game_paths_reader: "GamePathsReader") -> None:
+    def __init__(self, game_label_reader: "GameLabelsFromTaskDictReader",
+                 game_paths_reader: "GamePathsReader") -> None:
         self._game_label_reader = game_label_reader
         self._game_paths_reader = game_paths_reader
 
@@ -98,23 +99,19 @@ class SoccerNetVideoDataReader:
         video_data = []
         for game_paths in valid_game_paths:
             # Read the number of frames for each video.
-            num_video_frames_one = read_num_frames(
-                game_paths.features_one)
-            num_video_frames_two = read_num_frames(
-                game_paths.features_two)
+            num_video_frames_one = read_num_frames(game_paths.features_one)
+            num_video_frames_two = read_num_frames(game_paths.features_two)
             # Read all the labels for the two videos.
             labels_from_task_dict_one, labels_from_task_dict_two = \
                 self._game_label_reader.read(
                     game_paths, num_video_frames_one, num_video_frames_two)
             # Build VideoDatum for each of the two halves.
             video_datum_one = DefaultVideoDatum(
-                game_paths.features_one,
-                game_paths.relative / PREFIX_HALF_ONE,
+                game_paths.features_one, game_paths.relative / PREFIX_HALF_ONE,
                 labels_from_task_dict_one, num_video_frames_one)
             video_data.append(video_datum_one)
             video_datum_two = DefaultVideoDatum(
-                game_paths.features_two,
-                game_paths.relative / PREFIX_HALF_TWO,
+                game_paths.features_two, game_paths.relative / PREFIX_HALF_TWO,
                 labels_from_task_dict_two, num_video_frames_two)
             video_data.append(video_datum_two)
         if not video_data:
@@ -125,13 +122,14 @@ class SoccerNetVideoDataReader:
 class GameLabelsFromTaskDictReader:
 
     def __init__(
-            self, game_one_hot_label_readers: Dict[
-                Task, "GameOneHotLabelReaderInterface"]) -> None:
+        self, game_one_hot_label_readers: Dict[Task,
+                                               "GameOneHotLabelReaderInterface"]
+    ) -> None:
         self._game_one_hot_label_readers = game_one_hot_label_readers
 
     def read(
-            self, game_paths: "GamePaths", len_half_one: int, len_half_two: int
-    ) -> Tuple[LabelsFromTaskDict, LabelsFromTaskDict]:
+            self, game_paths: "GamePaths", len_half_one: int,
+            len_half_two: int) -> Tuple[LabelsFromTaskDict, LabelsFromTaskDict]:
         labels_from_task_dict_one = {}
         labels_from_task_dict_two = {}
         for task in self._game_one_hot_label_readers:
@@ -153,9 +151,8 @@ class GameOneHotLabelReaderInterface(metaclass=ABCMeta):
 
 class GameOneHotSpottingLabelReader(GameOneHotLabelReaderInterface):
 
-    def __init__(
-            self, soccernet_type: str, frame_rate: float,
-            num_classes: int) -> None:
+    def __init__(self, soccernet_type: str, frame_rate: float,
+                 num_classes: int) -> None:
         self._frame_rate = frame_rate
         self._num_classes = num_classes
         self._event_dictionary = choose_spotting_event_dictionary(
@@ -163,9 +160,9 @@ class GameOneHotSpottingLabelReader(GameOneHotLabelReaderInterface):
 
     def read(self, game_labels_path: Optional[Path], len_half_one: int,
              len_half_two: int) -> Tuple[LabelsAndValid, LabelsAndValid]:
-        return read_game_labels(
-            game_labels_path, self._event_dictionary, len_half_one,
-            len_half_two, self._frame_rate, self._num_classes)
+        return read_game_labels(game_labels_path, self._event_dictionary,
+                                len_half_one, len_half_two, self._frame_rate,
+                                self._num_classes)
 
 
 class GameOneHotCameraChangeLabelReader(GameOneHotLabelReaderInterface):
@@ -176,16 +173,15 @@ class GameOneHotCameraChangeLabelReader(GameOneHotLabelReaderInterface):
 
     def read(self, game_labels_path: Optional[Path], len_half_one: int,
              len_half_two: int) -> Tuple[LabelsAndValid, LabelsAndValid]:
-        return read_game_change_labels(
-            game_labels_path, CAMERA_DICTIONARY, len_half_one, len_half_two,
-            self._frame_rate, self._num_classes)
+        return read_game_change_labels(game_labels_path, CAMERA_DICTIONARY,
+                                       len_half_one, len_half_two,
+                                       self._frame_rate, self._num_classes)
 
 
 class GamePaths:
 
-    def __init__(
-            self, features_one: Path, features_two: Path,
-            labels: Dict[Task, Path], relative: Path) -> None:
+    def __init__(self, features_one: Path, features_two: Path,
+                 labels: Dict[Task, Path], relative: Path) -> None:
         self.features_one = features_one
         self.features_two = features_two
         self.labels = labels
@@ -194,9 +190,9 @@ class GamePaths:
 
 class GamePathsReader:
 
-    def __init__(
-            self, soccernet_type: str, feature_name: str, features_dir: Path,
-            labels_dir: Path, splits_dir: Path) -> None:
+    def __init__(self, soccernet_type: str, feature_name: str,
+                 features_dir: Path, labels_dir: Path,
+                 splits_dir: Path) -> None:
         self._soccernet_type = soccernet_type
         self._features_dir = features_dir
         self._labels_dir = labels_dir
@@ -231,10 +227,9 @@ class GamePathsReader:
                     game_paths.features_two.exists()):
                 valid_game_paths.append(game_paths)
             else:
-                logging.warning(
-                    f"Missing at least one half of the game: "
-                    f"{game_paths.features_one} and/or "
-                    f"{game_paths.features_two}")
+                logging.warning(f"Missing at least one half of the game: "
+                                f"{game_paths.features_one} and/or "
+                                f"{game_paths.features_two}")
         return valid_game_paths
 
     def read(self, split_key: str) -> List[GamePaths]:
@@ -242,11 +237,13 @@ class GamePathsReader:
                 SOCCERNET_TYPE_ONE, SOCCERNET_TYPE_TWO,
                 SOCCERNET_TYPE_TWO_CHALLENGE_VALIDATION,
                 SOCCERNET_TYPE_TWO_CHALLENGE,
-                SOCCERNET_TYPE_TWO_CAMERA_SEGMENTATION}:
+                SOCCERNET_TYPE_TWO_CAMERA_SEGMENTATION
+        }:
             game_list = GamePathsReader._read_standard_game_list(
                 self._soccernet_type, self._splits_dir, split_key)
             all_game_paths = [
-                self._create_standard_game_paths(game) for game in game_list]
+                self._create_standard_game_paths(game) for game in game_list
+            ]
         elif self._soccernet_type == \
                 SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION:
             all_game_paths = \
@@ -260,37 +257,40 @@ class GamePathsReader:
     def read_game_list_v2(splits_dir: Path, split_key: str) -> List[Path]:
         json_file_names = V2_GAMES_JSONS[split_key]
         json_paths = [
-            splits_dir / json_file_name for json_file_name in json_file_names]
+            splits_dir / json_file_name for json_file_name in json_file_names
+        ]
         return GamePathsReader._read_game_list_from_jsons(json_paths)
 
     @staticmethod
-    def read_game_list_v2_camera_segmentation(
-            splits_dir: Path, split_key: str) -> List[Path]:
+    def read_game_list_v2_camera_segmentation(splits_dir: Path,
+                                              split_key: str) -> List[Path]:
         json_file_names = V2_CAMERA_SEGMENTATION_GAMES_JSONS[split_key]
         json_paths = [
-            splits_dir / json_file_name for json_file_name in json_file_names]
+            splits_dir / json_file_name for json_file_name in json_file_names
+        ]
         return GamePathsReader._read_game_list_from_jsons(json_paths)
 
     @staticmethod
-    def read_game_list_v2_challenge_validation(
-            splits_dir: Path, split_key: str) -> List[Path]:
+    def read_game_list_v2_challenge_validation(splits_dir: Path,
+                                               split_key: str) -> List[Path]:
         json_file_names = V2_CHALLENGE_VALIDATION_GAMES_JSONS[split_key]
         json_paths = [
-            splits_dir / json_file_name for json_file_name in json_file_names]
+            splits_dir / json_file_name for json_file_name in json_file_names
+        ]
         return GamePathsReader._read_game_list_from_jsons(json_paths)
 
     @staticmethod
-    def read_game_list_v2_challenge(
-            splits_dir: Path, split_key: str) -> List[Path]:
+    def read_game_list_v2_challenge(splits_dir: Path,
+                                    split_key: str) -> List[Path]:
         json_file_names = V2_CHALLENGE_GAMES_JSONS[split_key]
         json_paths = [
-            splits_dir / json_file_name for json_file_name in json_file_names]
+            splits_dir / json_file_name for json_file_name in json_file_names
+        ]
         return GamePathsReader._read_game_list_from_jsons(json_paths)
 
     @staticmethod
-    def _read_standard_game_list(
-            soccernet_type: str, splits_dir: Path,
-            split_key: str) -> List[Path]:
+    def _read_standard_game_list(soccernet_type: str, splits_dir: Path,
+                                 split_key: str) -> List[Path]:
         if soccernet_type in {SOCCERNET_TYPE_ONE, SOCCERNET_TYPE_TWO}:
             return GamePathsReader.read_game_list_v2(splits_dir, split_key)
         elif soccernet_type == SOCCERNET_TYPE_TWO_CHALLENGE_VALIDATION:
@@ -315,7 +315,8 @@ class GamePathsReader:
         base_labels = self._labels_dir / game
         labels = {
             task: base_labels / self._label_file_names[task]
-            for task in self._label_file_names}
+            for task in self._label_file_names
+        }
         return GamePaths(features_one, features_two, labels, game)
 
     @staticmethod
@@ -342,8 +343,8 @@ class GamePathsReader:
             self, split_key: str) -> List[GamePaths]:
         csv_file_names = V2_SPOTTING_AND_CAMERA_SEGMENTATION_GAMES_CSVS
         csv_paths = [
-            self._splits_dir / csv_file_name
-            for csv_file_name in csv_file_names]
+            self._splits_dir / csv_file_name for csv_file_name in csv_file_names
+        ]
         all_splits_game_paths = self._read_game_paths_from_csvs(csv_paths)
         return all_splits_game_paths[split_key]
 
@@ -374,7 +375,8 @@ class GamePathsReader:
                 labels = {
                     task: base_labels / self._label_file_names[task]
                     for task in self._label_file_names
-                    if int(row[task.name])}
+                    if int(row[task.name])
+                }
                 game_paths = GamePaths(features_one, features_two, labels, game)
                 split_key = row[GAMES_CSV_COLUMN_SPLIT_KEY]
                 all_splits_game_paths[split_key].append(game_paths)
@@ -386,7 +388,8 @@ class GamePathsReader:
             return {Task.SPOTTING: LABEL_FILE_NAME}
         elif soccernet_type in {
                 SOCCERNET_TYPE_TWO, SOCCERNET_TYPE_TWO_CHALLENGE_VALIDATION,
-                SOCCERNET_TYPE_TWO_CHALLENGE}:
+                SOCCERNET_TYPE_TWO_CHALLENGE
+        }:
             return {Task.SPOTTING: LABEL_FILE_NAME_V2}
         elif soccernet_type == SOCCERNET_TYPE_TWO_CAMERA_SEGMENTATION:
             return {Task.SEGMENTATION: LABEL_FILE_NAME_V2_CAMERAS}
@@ -394,7 +397,7 @@ class GamePathsReader:
                 SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION:
             return {
                 Task.SPOTTING: LABEL_FILE_NAME_V2,
-                Task.SEGMENTATION: LABEL_FILE_NAME_V2_CAMERAS}
+                Task.SEGMENTATION: LABEL_FILE_NAME_V2_CAMERAS
+            }
         else:
-            raise ValueError(
-                f"Unrecognized soccernet type: {soccernet_type}")
+            raise ValueError(f"Unrecognized soccernet type: {soccernet_type}")

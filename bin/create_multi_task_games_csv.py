@@ -20,7 +20,8 @@ ARG_SPLITS_DIR = "splits_dir"
 RELEVANT_SPLITS = [SPLIT_KEY_TRAIN, SPLIT_KEY_VALIDATION, SPLIT_KEY_TEST]
 OUT_FIELDS = [
     GAMES_CSV_COLUMN_GAME, GAMES_CSV_COLUMN_SPLIT_KEY, Task.SPOTTING.name,
-    Task.SEGMENTATION.name]
+    Task.SEGMENTATION.name
+]
 
 
 def main() -> None:
@@ -28,8 +29,8 @@ def main() -> None:
     splits_dir = Path(args[ARG_SPLITS_DIR])
     spotting_game_paths = _read_spotting_game_paths_dict(splits_dir)
     segmentation_game_paths_set = _read_segmentation_game_paths_set(splits_dir)
-    out_rows = _prepare_out_rows(
-        spotting_game_paths, segmentation_game_paths_set)
+    out_rows = _prepare_out_rows(spotting_game_paths,
+                                 segmentation_game_paths_set)
     _write_rows(out_rows)
     _print_summary(out_rows)
 
@@ -52,9 +53,8 @@ def _read_segmentation_game_paths_set(splits_dir: Path) -> Set[Path]:
     return segmentation_game_paths
 
 
-def _prepare_out_rows(
-        spotting_game_paths: Dict[str, List[Path]],
-        segmentation_game_paths_set: Set[Path]) -> List[Dict]:
+def _prepare_out_rows(spotting_game_paths: Dict[str, List[Path]],
+                      segmentation_game_paths_set: Set[Path]) -> List[Dict]:
     out_rows = []
     for split_key in RELEVANT_SPLITS:
         split_games = spotting_game_paths[split_key]
@@ -64,7 +64,8 @@ def _prepare_out_rows(
                 GAMES_CSV_COLUMN_GAME: game_path,
                 GAMES_CSV_COLUMN_SPLIT_KEY: split_key,
                 Task.SEGMENTATION.name: int(use_segmentation),
-                Task.SPOTTING.name: 1}
+                Task.SPOTTING.name: 1
+            }
             out_rows.append(row)
     return out_rows
 
@@ -82,7 +83,8 @@ def _print_summary(out_rows: List[Dict]) -> None:
     for split_key in RELEVANT_SPLITS:
         split_rows = [
             row for row in out_rows
-            if row[GAMES_CSV_COLUMN_SPLIT_KEY] == split_key]
+            if row[GAMES_CSV_COLUMN_SPLIT_KEY] == split_key
+        ]
         n_games = len(split_rows)
         n_segmentation = sum(row[Task.SEGMENTATION.name] for row in split_rows)
         n_spotting = sum(row[Task.SPOTTING.name] for row in split_rows)
@@ -92,9 +94,9 @@ def _print_summary(out_rows: List[Dict]) -> None:
 
 def _get_command_line_arguments() -> Dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--" + ARG_SPLITS_DIR, help="Directory containing the splits",
-        required=True)
+    parser.add_argument("--" + ARG_SPLITS_DIR,
+                        help="Directory containing the splits",
+                        required=True)
     args_dict = vars(parser.parse_args())
     return args_dict
 

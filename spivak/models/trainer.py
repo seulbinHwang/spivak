@@ -48,10 +48,9 @@ class FittingDataset:
 
 class DefaultTrainer(TrainerInterface):
 
-    def __init__(
-            self, model: Model, trainer_heads: List[TrainerHeadInterface],
-            fitting_training_set: FittingDataset,
-            fitting_validation_set: Optional[FittingDataset]) -> None:
+    def __init__(self, model: Model, trainer_heads: List[TrainerHeadInterface],
+                 fitting_training_set: FittingDataset,
+                 fitting_validation_set: Optional[FittingDataset]) -> None:
         self._model = model
         self._trainer_heads = trainer_heads
         # Using fit with the Tensorflow Dataset was the fastest solution
@@ -64,17 +63,20 @@ class DefaultTrainer(TrainerInterface):
     def compile(self, optimizer: Optimizer) -> None:
         losses = [
             trainer_head.predictor_head.loss
-            for trainer_head in self._trainer_heads]
+            for trainer_head in self._trainer_heads
+        ]
         loss_weights = [
             trainer_head.predictor_head.loss_weight
-            for trainer_head in self._trainer_heads]
+            for trainer_head in self._trainer_heads
+        ]
         # Keras has some memory leaks that we are trying to work around. When
         # using run_eagerly=True, the leak is smaller. In theory,
         # it is slower, but I didn't notice a significant decrease in speed
         # in some experiments.
-        self._model.compile(
-            loss=losses, optimizer=optimizer, loss_weights=loss_weights,
-            run_eagerly=True)
+        self._model.compile(loss=losses,
+                            optimizer=optimizer,
+                            loss_weights=loss_weights,
+                            run_eagerly=True)
 
     def fit(self, initial_epoch: int, epochs: int, callbacks,
             validation_freq) -> History:
@@ -82,14 +84,14 @@ class DefaultTrainer(TrainerInterface):
             validation_tf_dataset = self._fitting_validation_set.tf_dataset
         else:
             validation_tf_dataset = None
-        return self._model.fit(
-            self._fitting_training_set.tf_dataset,
-            initial_epoch=initial_epoch,
-            epochs=epochs, callbacks=callbacks,
-            steps_per_epoch=self.steps_per_epoch,
-            validation_data=validation_tf_dataset,
-            validation_freq=validation_freq,
-            validation_steps=self.validation_steps)
+        return self._model.fit(self._fitting_training_set.tf_dataset,
+                               initial_epoch=initial_epoch,
+                               epochs=epochs,
+                               callbacks=callbacks,
+                               steps_per_epoch=self.steps_per_epoch,
+                               validation_data=validation_tf_dataset,
+                               validation_freq=validation_freq,
+                               validation_steps=self.validation_steps)
 
     def save_model(self, model_path: str) -> None:
         self._model.save(model_path)

@@ -90,7 +90,8 @@ END_LEARNING_RATE_FRACTION = 0.01
 SAM_EPSILON = 1e-12
 DENSE_HEAD_NAMES = [
     OUTPUT_CONFIDENCE, OUTPUT_DELTA, OUTPUT_CONFIDENCE_AUX, OUTPUT_DELTA_AUX,
-    OUTPUT_SEGMENTATION]
+    OUTPUT_SEGMENTATION
+]
 # When training the deltas by themselves (without the confidences in the same
 # models), initializing with zeros makes optimization much harder, so it's
 # better not to use it. However, when training with the confidences, sometimes
@@ -162,9 +163,8 @@ NMS_LINEAR_EXPANSION = 2.0
 PROJECTION_LAYER_NAME = f"{NODE_OPTIONAL_PROJECTION}_relu"
 
 
-def create_flexible_nms(
-        args: SharedArgs, label_map: LabelMap
-) -> FlexibleNonMaximumSuppression:
+def create_flexible_nms(args: SharedArgs,
+                        label_map: LabelMap) -> FlexibleNonMaximumSuppression:
     config_dir = dir_str_to_path(args.config_dir)
     potential_nms_windows_path = config_dir / NMS_WINDOWS_CSV
     if potential_nms_windows_path.exists():
@@ -186,28 +186,28 @@ def create_flexible_nms(
     if args.nms_decay == NMS_DECAY_SUPPRESS:
         score_decay = ScoreDecaySuppress()
     elif args.nms_decay == NMS_DECAY_LINEAR:
-        score_decay = ScoreDecayLinear(
-            args.nms_decay_linear_min, NMS_LINEAR_EXPANSION)
+        score_decay = ScoreDecayLinear(args.nms_decay_linear_min,
+                                       NMS_LINEAR_EXPANSION)
     elif args.nms_decay == NMS_DECAY_GAUSSIAN:
         raise NotImplementedError(
             f"NMS decay {NMS_DECAY_GAUSSIAN} not implemented")
     else:
         raise ValueError(f"Unknown value for args.nmsdecay: {args.nms_decay}")
-    return FlexibleNonMaximumSuppression(
-        bool(args.apply_nms), class_windows, score_decay)
+    return FlexibleNonMaximumSuppression(bool(args.apply_nms), class_windows,
+                                         score_decay)
 
 
 def load_or_create_trainer(
         last_model_path: str, args: SharedArgs, training_set: Dataset,
-        validation_set: Optional[Dataset], label_maps: Dict[Task, LabelMap]
-) -> TrainerInterface:
+        validation_set: Optional[Dataset],
+        label_maps: Dict[Task, LabelMap]) -> TrainerInterface:
     # If models file already exists, just load it.
     if os.path.exists(last_model_path):
         if args.learning_rate_decay == LEARNING_RATE_DECAY_LEGACY:
             raise ValueError("Cannot load models to continue training when "
                              "using legacy learning rate decay")
-        trainer = _load_trainer(
-            args, last_model_path, label_maps, training_set, validation_set)
+        trainer = _load_trainer(args, last_model_path, label_maps, training_set,
+                                validation_set)
         if args.sam_rho > 0.0:
             # Due to monkey-patching the train_step function in the models for
             # SAM, we need to compile the models again. Hopefully, this won't
@@ -223,23 +223,21 @@ def load_or_create_trainer(
 
 
 def load_predictor_from_model_path(
-        args: SharedArgs, model_path: str,
-        label_maps: Dict[Task, LabelMap], chunk_prediction_border: float
-) -> PredictorInterface:
-    return _load_predictor(
-        args, model_path, label_maps, chunk_prediction_border)
+        args: SharedArgs, model_path: str, label_maps: Dict[Task, LabelMap],
+        chunk_prediction_border: float) -> PredictorInterface:
+    return _load_predictor(args, model_path, label_maps,
+                           chunk_prediction_border)
 
 
-def load_predictor(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap],
-        input_shape: InputShape, chunk_prediction_border: float
-) -> PredictorInterface:
+def load_predictor(args: SharedArgs, label_maps: Dict[Task, LabelMap],
+                   input_shape: InputShape,
+                   chunk_prediction_border: float) -> PredictorInterface:
     if args.model:
-        return _load_predictor(
-            args, args.model, label_maps, chunk_prediction_border)
+        return _load_predictor(args, args.model, label_maps,
+                               chunk_prediction_border)
     elif args.model_weights:
-        predictor = _create_predictor(
-            args, input_shape, label_maps, chunk_prediction_border)
+        predictor = _create_predictor(args, input_shape, label_maps,
+                                      chunk_prediction_border)
         predictor.load_weights(args.model_weights)
         return predictor
     else:
@@ -248,9 +246,8 @@ def load_predictor(
             "arguments")
 
 
-def load_projector(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap]
-) -> Projector:
+def load_projector(args: SharedArgs, label_maps: Dict[Task,
+                                                      LabelMap]) -> Projector:
     model = _load_keras_model(args, label_maps)
     projector_model = Model(
         inputs=model.input,
@@ -269,83 +266,82 @@ def create_delta_radius(args: SharedArgs) -> float:
     return args.delta_radius_multiplier * radius
 
 
-def _load_trainer(
-        args: SharedArgs, model_path: str,
-        label_maps: Dict[Task, LabelMap], training_set: Dataset,
-        validation_set: Optional[Dataset]) -> TrainerInterface:
+def _load_trainer(args: SharedArgs, model_path: str,
+                  label_maps: Dict[Task, LabelMap], training_set: Dataset,
+                  validation_set: Optional[Dataset]) -> TrainerInterface:
     if args.detector in {DETECTOR_DENSE, DETECTOR_DENSE_DELTA}:
         trainer_heads = _dense_trainer_heads(args, label_maps, training_set)
         predictor_heads = [
-            trainer_head.predictor_head for trainer_head in trainer_heads]
+            trainer_head.predictor_head for trainer_head in trainer_heads
+        ]
         _update_keras_custom_objects(predictor_heads)
         model = _load_model(args, model_path)
-        return _trainer(
-            model, trainer_heads, args, training_set, validation_set)
+        return _trainer(model, trainer_heads, args, training_set,
+                        validation_set)
     else:
         raise ValueError(f"Unknown detector choice: {args.detector}")
 
 
-def _create_trainer(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap],
-        training_set: Dataset, validation_set: Optional[Dataset]
-) -> TrainerInterface:
+def _create_trainer(args: SharedArgs, label_maps: Dict[Task, LabelMap],
+                    training_set: Dataset,
+                    validation_set: Optional[Dataset]) -> TrainerInterface:
     input_shape = training_set.input_shape
     if args.detector in {DETECTOR_DENSE, DETECTOR_DENSE_DELTA}:
         trainer_heads = _dense_trainer_heads(args, label_maps, training_set)
         predictor_heads = [
-            trainer_head.predictor_head for trainer_head in trainer_heads]
+            trainer_head.predictor_head for trainer_head in trainer_heads
+        ]
         model = _create_keras_model(args, input_shape, predictor_heads)
-        return _trainer(
-            model, trainer_heads, args, training_set, validation_set)
+        return _trainer(model, trainer_heads, args, training_set,
+                        validation_set)
     else:
         raise ValueError(f"Unknown detector choice: {args.detector}")
 
 
-def _load_predictor(
-        args: SharedArgs, model_path: str,
-        label_maps: Dict[Task, LabelMap], chunk_prediction_border: float
-) -> PredictorInterface:
+def _load_predictor(args: SharedArgs, model_path: str,
+                    label_maps: Dict[Task, LabelMap],
+                    chunk_prediction_border: float) -> PredictorInterface:
     if args.detector == DETECTOR_DENSE:
-        return _load_dense_predictor(
-            args, model_path, label_maps, chunk_prediction_border)
+        return _load_dense_predictor(args, model_path, label_maps,
+                                     chunk_prediction_border)
     elif args.detector == DETECTOR_DENSE_DELTA:
-        dense_predictor = _load_dense_predictor(
-            args, model_path, label_maps, chunk_prediction_border)
-        return DeltaDensePredictor(
-            dense_predictor, dir_str_to_path(args.results_dir))
-    elif args.detector in {DETECTOR_AVERAGING_CONFIDENCE,
-                           DETECTOR_AVERAGING_DELTA}:
+        dense_predictor = _load_dense_predictor(args, model_path, label_maps,
+                                                chunk_prediction_border)
+        return DeltaDensePredictor(dense_predictor,
+                                   dir_str_to_path(args.results_dir))
+    elif args.detector in {
+            DETECTOR_AVERAGING_CONFIDENCE, DETECTOR_AVERAGING_DELTA
+    }:
         with open(model_path, "rb") as model_file:
             return pickle.load(model_file)
     else:
         raise ValueError(f"Unknown detector choice: {args.detector}")
 
 
-def _load_dense_predictor(
-        args: SharedArgs, model_path: str,
-        label_maps: Dict[Task, LabelMap], chunk_prediction_border: float
-) -> DensePredictor:
+def _load_dense_predictor(args: SharedArgs, model_path: str,
+                          label_maps: Dict[Task, LabelMap],
+                          chunk_prediction_border: float) -> DensePredictor:
     predictor_heads = _dense_predictor_heads(args, label_maps)
     _update_keras_custom_objects(predictor_heads)
     model = _load_model(args, model_path)
-    return _dense_predictor(
-        model, predictor_heads, args, chunk_prediction_border)
+    return _dense_predictor(model, predictor_heads, args,
+                            chunk_prediction_border)
 
 
-def _create_predictor(
-        args: SharedArgs, input_shape: InputShape,
-        label_maps: Dict[Task, LabelMap], chunk_prediction_border: float
-) -> PredictorInterface:
+def _create_predictor(args: SharedArgs, input_shape: InputShape,
+                      label_maps: Dict[Task, LabelMap],
+                      chunk_prediction_border: float) -> PredictorInterface:
     if args.detector == DETECTOR_DENSE:
-        return _create_dense_predictor(
-            args, input_shape, label_maps, chunk_prediction_border)
+        return _create_dense_predictor(args, input_shape, label_maps,
+                                       chunk_prediction_border)
     elif args.detector == DETECTOR_DENSE_DELTA:
-        dense_predictor = _create_dense_predictor(
-            args, input_shape, label_maps, chunk_prediction_border)
-        return DeltaDensePredictor(
-            dense_predictor, dir_str_to_path(args.results_dir))
-    elif args.detector in {DETECTOR_AVERAGING_CONFIDENCE,
-                           DETECTOR_AVERAGING_DELTA}:
+        dense_predictor = _create_dense_predictor(args, input_shape, label_maps,
+                                                  chunk_prediction_border)
+        return DeltaDensePredictor(dense_predictor,
+                                   dir_str_to_path(args.results_dir))
+    elif args.detector in {
+            DETECTOR_AVERAGING_CONFIDENCE, DETECTOR_AVERAGING_DELTA
+    }:
         raise ValueError(
             f"Creation of {args.detector} not supported. Please use the "
             f"create_averaging_predictor.py script instead.")
@@ -353,61 +349,63 @@ def _create_predictor(
         raise ValueError(f"Unknown detector choice: {args.detector}")
 
 
-def _create_dense_predictor(
-        args: SharedArgs, input_shape: InputShape,
-        label_maps: Dict[Task, LabelMap], chunk_prediction_border: float
-) -> DensePredictor:
+def _create_dense_predictor(args: SharedArgs, input_shape: InputShape,
+                            label_maps: Dict[Task, LabelMap],
+                            chunk_prediction_border: float) -> DensePredictor:
     predictor_heads = _dense_predictor_heads(args, label_maps)
     model = _create_keras_model(args, input_shape, predictor_heads)
-    return _dense_predictor(
-        model, predictor_heads, args, chunk_prediction_border)
+    return _dense_predictor(model, predictor_heads, args,
+                            chunk_prediction_border)
 
 
-def _trainer(
-        model: Model, trainer_heads: List[TrainerHeadInterface],
-        args: SharedArgs, training_set: Dataset,
-        validation_set: Optional[Dataset]) -> DefaultTrainer:
+def _trainer(model: Model, trainer_heads: List[TrainerHeadInterface],
+             args: SharedArgs, training_set: Dataset,
+             validation_set: Optional[Dataset]) -> DefaultTrainer:
     logging.info(f"Preparing training TF dataset from "
                  f"{training_set.num_videos} videos")
-    fitting_training_set = _fitting_dataset(
-        args, training_set, trainer_heads, INDEFINITE_REPETITIONS,
-        shuffle_videos=args.shuffle_videos, chunk_shuffle=args.chunk_shuffle)
+    fitting_training_set = _fitting_dataset(args,
+                                            training_set,
+                                            trainer_heads,
+                                            INDEFINITE_REPETITIONS,
+                                            shuffle_videos=args.shuffle_videos,
+                                            chunk_shuffle=args.chunk_shuffle)
     if validation_set:
         logging.info(f"Preparing validation TF dataset from "
                      f"{validation_set.num_videos} videos")
         # TODO: maybe remove randomness when generating batches for validation.
-        fitting_validation_set = _fitting_dataset(
-            args, validation_set, trainer_heads, INDEFINITE_REPETITIONS,
-            shuffle_videos=False, chunk_shuffle=0.0)
+        fitting_validation_set = _fitting_dataset(args,
+                                                  validation_set,
+                                                  trainer_heads,
+                                                  INDEFINITE_REPETITIONS,
+                                                  shuffle_videos=False,
+                                                  chunk_shuffle=0.0)
     else:
         fitting_validation_set = None
-    return DefaultTrainer(
-        model, trainer_heads, fitting_training_set, fitting_validation_set)
+    return DefaultTrainer(model, trainer_heads, fitting_training_set,
+                          fitting_validation_set)
 
 
-def _fitting_dataset(
-        args: SharedArgs, dataset: Dataset,
-        heads: List[TrainerHeadInterface], repetitions: Optional[int],
-        shuffle_videos: bool, chunk_shuffle: float) -> FittingDataset:
+def _fitting_dataset(args: SharedArgs, dataset: Dataset,
+                     heads: List[TrainerHeadInterface],
+                     repetitions: Optional[int], shuffle_videos: bool,
+                     chunk_shuffle: float) -> FittingDataset:
     # At the moment, we could initialize video_start_providers outside and
     # share it between the training and validation datasets, but eventually
     # those datasets should have different video_start_provider settings.
     video_start_providers = _video_start_providers(args, dataset)
-    tf_dataset = _tf_dataset(
-        args, dataset, heads, video_start_providers, repetitions,
-        shuffle_videos, chunk_shuffle)
+    tf_dataset = _tf_dataset(args, dataset, heads, video_start_providers,
+                             repetitions, shuffle_videos, chunk_shuffle)
     num_tasks = len(dataset.tasks)
     num_batches_per_epoch = num_tasks * math.ceil(
         CHUNKS_PER_EPOCH / args.batch_size)
     return FittingDataset(tf_dataset, num_batches_per_epoch)
 
 
-def _tf_dataset(
-        args: SharedArgs, dataset: Dataset,
-        heads: List[TrainerHeadInterface],
-        video_start_providers: Dict[Task, VideoStartProviderInterface],
-        repetitions: Optional[int], shuffle_videos: bool,
-        chunk_shuffle: float) -> TFDataset:
+def _tf_dataset(args: SharedArgs, dataset: Dataset,
+                heads: List[TrainerHeadInterface],
+                video_start_providers: Dict[Task, VideoStartProviderInterface],
+                repetitions: Optional[int], shuffle_videos: bool,
+                chunk_shuffle: float) -> TFDataset:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     if args.mixup_alpha:
         mixup_batch_augmentation = create_tf_mixup_batch_augmentation(
@@ -437,44 +435,42 @@ def _tf_dataset(
 
 
 def _video_start_providers(
-        args: SharedArgs, dataset: Dataset
-) -> Dict[Task, VideoStartProviderInterface]:
+        args: SharedArgs,
+        dataset: Dataset) -> Dict[Task, VideoStartProviderInterface]:
     return {
         task: _video_start_provider(args, dataset.video_data, task)
         for task in dataset.tasks
     }
 
 
-def _video_start_provider(
-        args: SharedArgs, video_data: List[VideoDatum], task: Task
-) -> VideoStartProviderInterface:
+def _video_start_provider(args: SharedArgs, video_data: List[VideoDatum],
+                          task: Task) -> VideoStartProviderInterface:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     min_valid_chunk_frames = compute_min_valid_chunk_frames(
         video_data, args.frame_rate, args.min_valid_chunk_duration)
     if args.sampling == SAMPLING_UNIFORM:
-        return VideoStartProviderUniform(
-            args.chunks_per_minute, min_valid_chunk_frames, args.frame_rate,
-            task)
+        return VideoStartProviderUniform(args.chunks_per_minute,
+                                         min_valid_chunk_frames,
+                                         args.frame_rate, task)
     elif args.sampling == SAMPLING_WEIGHTED:
         start_probabilities_creator = StartProbabilitiesCreator(
             num_chunk_frames, min_valid_chunk_frames,
             args.sampling_negative_fraction)
-        return VideoStartProviderWeighted(
-            args.chunks_per_minute, args.frame_rate,
-            start_probabilities_creator)
+        return VideoStartProviderWeighted(args.chunks_per_minute,
+                                          args.frame_rate,
+                                          start_probabilities_creator)
     else:
         raise ValueError(f"Unknown negative sampling strategy: {args.sampling}")
 
 
-def _dense_predictor(
-        model: Model, predictor_heads: List[PredictorHeadInterface],
-        args: SharedArgs, chunk_prediction_border: float
-) -> DensePredictor:
+def _dense_predictor(model: Model,
+                     predictor_heads: List[PredictorHeadInterface],
+                     args: SharedArgs,
+                     chunk_prediction_border: float) -> DensePredictor:
     video_chunk_iterator_provider = _video_chunk_iterator_provider(
         args, chunk_prediction_border)
-    return DensePredictor(
-        model, predictor_heads, video_chunk_iterator_provider,
-        bool(args.throw_out_delta), bool(args.profile))
+    return DensePredictor(model, predictor_heads, video_chunk_iterator_provider,
+                          bool(args.throw_out_delta), bool(args.profile))
 
 
 def _optimizer(args: SharedArgs, steps_per_epoch: int) -> Optimizer:
@@ -488,20 +484,26 @@ def _optimizer(args: SharedArgs, steps_per_epoch: int) -> Optimizer:
     if args.decoupled_weight_decay:
         weight_decay = _create_weight_decay(args, steps_per_epoch)
         if args.optimizer == OPTIMIZER_ADAM:
-            optimizer = tfa.optimizers.AdamW(
-                learning_rate=learning_rate, weight_decay=weight_decay,
-                beta_1=0.9, beta_2=0.999, amsgrad=False, epsilon=1e-7)
+            optimizer = tfa.optimizers.AdamW(learning_rate=learning_rate,
+                                             weight_decay=weight_decay,
+                                             beta_1=0.9,
+                                             beta_2=0.999,
+                                             amsgrad=False,
+                                             epsilon=1e-7)
         elif args.optimizer == OPTIMIZER_SGD:
-            optimizer = tfa.optimizers.SGDW(
-                learning_rate=learning_rate, weight_decay=weight_decay,
-                momentum=0.9)
+            optimizer = tfa.optimizers.SGDW(learning_rate=learning_rate,
+                                            weight_decay=weight_decay,
+                                            momentum=0.9)
         else:
             raise ValueError(f"Unrecognized optimizer: {args.optimizer}")
     else:
         if args.optimizer == OPTIMIZER_ADAM:
             optimizer = tensorflow.keras.optimizers.Adam(
-                learning_rate=learning_rate, beta_1=0.9, beta_2=0.999,
-                amsgrad=False, epsilon=1e-7)
+                learning_rate=learning_rate,
+                beta_1=0.9,
+                beta_2=0.999,
+                amsgrad=False,
+                epsilon=1e-7)
         elif args.optimizer == OPTIMIZER_SGD:
             optimizer = tensorflow.keras.optimizers.SGD(
                 learning_rate=learning_rate, momentum=0.9)
@@ -519,30 +521,34 @@ def _create_weight_decay(args: SharedArgs, steps_per_epoch: int):
     # schedule. See:
     # https://www.tensorflow.org/addons/api_docs/python/tfa/optimizers/AdamW
     # https://github.com/tensorflow/addons/issues/844
-    return _maybe_create_schedule(
-        args, steps_per_epoch, args.decoupled_weight_decay)
+    return _maybe_create_schedule(args, steps_per_epoch,
+                                  args.decoupled_weight_decay)
 
 
-def _maybe_create_schedule(
-        args: SharedArgs, steps_per_epoch: int, variable: float):
+def _maybe_create_schedule(args: SharedArgs, steps_per_epoch: int,
+                           variable: float):
     if args.learning_rate_decay == LEARNING_RATE_DECAY_EXPONENTIAL:
-        decay_steps = (
-                args.learning_rate_decay_exponential_epochs * steps_per_epoch)
+        decay_steps = (args.learning_rate_decay_exponential_epochs *
+                       steps_per_epoch)
         variable = tensorflow.keras.optimizers.schedules.ExponentialDecay(
             initial_learning_rate=variable,
             decay_rate=args.learning_rate_decay_exponential_rate,
-            decay_steps=decay_steps, staircase=False)
+            decay_steps=decay_steps,
+            staircase=False)
     elif args.learning_rate_decay == LEARNING_RATE_DECAY_LINEAR:
         decay_steps = args.learning_rate_decay_linear_epochs * steps_per_epoch
         end_variable = variable * END_LEARNING_RATE_FRACTION
         variable = tensorflow.keras.optimizers.schedules.PolynomialDecay(
-            initial_learning_rate=variable, decay_steps=decay_steps,
-            end_learning_rate=end_variable, power=1, cycle=True)
+            initial_learning_rate=variable,
+            decay_steps=decay_steps,
+            end_learning_rate=end_variable,
+            power=1,
+            cycle=True)
     return variable
 
 
-def _load_keras_model(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap]) -> Model:
+def _load_keras_model(args: SharedArgs, label_maps: Dict[Task,
+                                                         LabelMap]) -> Model:
     if args.detector in {DETECTOR_DENSE, DETECTOR_DENSE_DELTA}:
         predictor_heads = _dense_predictor_heads(args, label_maps)
         _update_keras_custom_objects(predictor_heads)
@@ -552,13 +558,16 @@ def _load_keras_model(
 
 
 def _dense_predictor_heads(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap]
-) -> List[PredictorHeadInterface]:
+        args: SharedArgs,
+        label_maps: Dict[Task, LabelMap]) -> List[PredictorHeadInterface]:
     optional_heads = [
         _optional_predictor_head(args, head_name, label_maps)
-        for head_name in DENSE_HEAD_NAMES]
-    return [optional_head for optional_head in optional_heads
-            if optional_head is not None]
+        for head_name in DENSE_HEAD_NAMES
+    ]
+    return [
+        optional_head for optional_head in optional_heads
+        if optional_head is not None
+    ]
 
 
 def _optional_predictor_head(
@@ -568,93 +577,96 @@ def _optional_predictor_head(
     if head_name == OUTPUT_CONFIDENCE:
         if args.confidence_weight == 0.0:
             return None
-        return _confidence_predictor_head(
-            args, head_name, num_classes_spotting, None)
+        return _confidence_predictor_head(args, head_name, num_classes_spotting,
+                                          None)
     elif head_name == OUTPUT_DELTA:
         if args.delta_weight == 0.0:
             return None
         delta_radius = create_delta_radius(args)
-        return _delta_predictor_head(
-            args, head_name, num_classes_spotting, delta_radius)
+        return _delta_predictor_head(args, head_name, num_classes_spotting,
+                                     delta_radius)
     elif head_name == OUTPUT_CONFIDENCE_AUX:
         if args.confidence_aux_weight == 0.0:
             return None
         confidence_radii = [
-            args.frame_rate * s for s in CONFIDENCE_AUX_RADII_IN_SECONDS]
-        return _confidence_aux_predictor_head(
-            args, head_name, num_classes_spotting, confidence_radii)
+            args.frame_rate * s for s in CONFIDENCE_AUX_RADII_IN_SECONDS
+        ]
+        return _confidence_aux_predictor_head(args, head_name,
+                                              num_classes_spotting,
+                                              confidence_radii)
     elif head_name == OUTPUT_DELTA_AUX:
         if args.delta_aux_weight == 0.0:
             return None
         radii = [args.frame_rate * s for s in DELTA_AUX_RADII_IN_SECONDS]
-        return _delta_aux_predictor_head(
-            args, head_name, num_classes_spotting, radii)
+        return _delta_aux_predictor_head(args, head_name, num_classes_spotting,
+                                         radii)
     elif head_name == OUTPUT_SEGMENTATION:
         if args.segmentation_weight == 0.0:
             return None
         num_classes_segmentation = label_maps[Task.SEGMENTATION].num_classes()
-        return _segmentation_predictor_head(
-            args, head_name, num_classes_segmentation)
+        return _segmentation_predictor_head(args, head_name,
+                                            num_classes_segmentation)
     else:
         raise ValueError(f"Unknown predictor head name: {head_name}")
 
 
-def _dense_trainer_heads(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap],
-        training_set: Dataset) -> List[TrainerHeadInterface]:
+def _dense_trainer_heads(args: SharedArgs, label_maps: Dict[Task, LabelMap],
+                         training_set: Dataset) -> List[TrainerHeadInterface]:
     optional_heads = [
         _optional_trainer_head(args, head_name, label_maps, training_set)
-        for head_name in DENSE_HEAD_NAMES]
-    return [optional_head for optional_head in optional_heads
-            if optional_head is not None]
+        for head_name in DENSE_HEAD_NAMES
+    ]
+    return [
+        optional_head for optional_head in optional_heads
+        if optional_head is not None
+    ]
 
 
 def _optional_trainer_head(
-        args: SharedArgs, head_name: str,
-        label_maps: Dict[Task, LabelMap], training_set: Dataset
-) -> Optional[TrainerHeadInterface]:
+        args: SharedArgs, head_name: str, label_maps: Dict[Task, LabelMap],
+        training_set: Dataset) -> Optional[TrainerHeadInterface]:
     config_dir = dir_str_to_path(args.config_dir)
     spotting_class_weights = _read_spotting_class_weights(
         config_dir, label_maps[Task.SPOTTING])
     if head_name == OUTPUT_CONFIDENCE:
         if args.confidence_weight == 0.0:
             return None
-        return _confidence_trainer_head(
-            args, head_name, training_set, spotting_class_weights)
+        return _confidence_trainer_head(args, head_name, training_set,
+                                        spotting_class_weights)
     elif head_name == OUTPUT_CONFIDENCE_AUX:
         if args.confidence_aux_weight == 0.0:
             return None
-        return _confidence_aux_trainer_head(
-            args, head_name, training_set, spotting_class_weights)
+        return _confidence_aux_trainer_head(args, head_name, training_set,
+                                            spotting_class_weights)
     elif head_name == OUTPUT_DELTA:
         if args.delta_weight == 0.0:
             return None
-        return _delta_trainer_head(
-            args, head_name, training_set, spotting_class_weights)
+        return _delta_trainer_head(args, head_name, training_set,
+                                   spotting_class_weights)
     elif head_name == OUTPUT_DELTA_AUX:
         if args.delta_aux_weight == 0.0:
             return None
-        return _delta_aux_trainer_head(
-            args, head_name, training_set, spotting_class_weights)
+        return _delta_aux_trainer_head(args, head_name, training_set,
+                                       spotting_class_weights)
     elif head_name == OUTPUT_SEGMENTATION:
         if args.segmentation_weight == 0.0:
             return None
         segmentation_class_weights = _read_segmentation_class_weights(
             args.config_dir, label_maps[Task.SEGMENTATION])
-        return _segmentation_trainer_head(
-            args, head_name, training_set, segmentation_class_weights)
+        return _segmentation_trainer_head(args, head_name, training_set,
+                                          segmentation_class_weights)
     else:
         raise ValueError(f"Unknown trainer head name: {head_name}")
 
 
-def _read_spotting_class_weights(
-        config_dir: Path, label_map: LabelMap) -> np.ndarray:
+def _read_spotting_class_weights(config_dir: Path,
+                                 label_map: LabelMap) -> np.ndarray:
     class_weights_path = config_dir / CLASS_WEIGHTS_CSV_SPOTTING
     return read_class_weights(class_weights_path, label_map)
 
 
-def _read_segmentation_class_weights(
-        config_dir: Path, label_map: LabelMap) -> np.ndarray:
+def _read_segmentation_class_weights(config_dir: Path,
+                                     label_map: LabelMap) -> np.ndarray:
     class_weights_path = config_dir / CLASS_WEIGHTS_CSV_SEGMENTATION
     return read_class_weights(class_weights_path, label_map)
 
@@ -666,8 +678,8 @@ def _confidence_trainer_head(
     # so it is equivalent to the confidence_radius measured in seconds
     # multiplied by the frame rate.
     confidence_radius = args.frame_rate * args.dense_detection_radius
-    confidence_class_counts = ConfidenceClassCounts(
-        training_set, confidence_radius)
+    confidence_class_counts = ConfidenceClassCounts(training_set,
+                                                    confidence_radius)
     if args.positive_weight_confidence:
         weight_creator = ConfidenceWeightCreator(
             confidence_class_counts, args.positive_weight_confidence,
@@ -683,61 +695,57 @@ def _confidence_trainer_head(
     num_classes = len(class_weights)
     confidence_predictor_head = _confidence_predictor_head(
         args, head_name, num_classes, predictor_class_counts)
-    return ConfidenceTrainerHead(
-        confidence_radius, confidence_predictor_head, weight_creator)
+    return ConfidenceTrainerHead(confidence_radius, confidence_predictor_head,
+                                 weight_creator)
 
 
 def _confidence_aux_trainer_head(
         args: SharedArgs, head_name: str, training_set: Dataset,
         class_weights: np.ndarray) -> ConfidenceAuxTrainerHead:
     confidence_radii = [
-        args.frame_rate * s for s in CONFIDENCE_AUX_RADII_IN_SECONDS]
+        args.frame_rate * s for s in CONFIDENCE_AUX_RADII_IN_SECONDS
+    ]
     if args.positive_weight_confidence:
         weight_creators = [
-            ConfidenceWeightCreator(
-                ConfidenceClassCounts(training_set, radius),
-                args.positive_weight_confidence, class_weights
-            )
+            ConfidenceWeightCreator(ConfidenceClassCounts(training_set, radius),
+                                    args.positive_weight_confidence,
+                                    class_weights)
             for radius in confidence_radii
         ]
     else:
         identity_weight_creator = IdentityWeightCreator(class_weights)
-        weight_creators = [
-            identity_weight_creator for _ in confidence_radii]
+        weight_creators = [identity_weight_creator for _ in confidence_radii]
     num_classes = len(class_weights)
     confidence_aux_predictor_head = _confidence_aux_predictor_head(
         args, head_name, num_classes, confidence_radii)
-    return ConfidenceAuxTrainerHead(
-        confidence_aux_predictor_head, weight_creators)
+    return ConfidenceAuxTrainerHead(confidence_aux_predictor_head,
+                                    weight_creators)
 
 
-def _delta_trainer_head(
-        args: SharedArgs, head_name: str, training_set: Dataset,
-        class_weights: np.ndarray) -> DeltaTrainerHead:
+def _delta_trainer_head(args: SharedArgs, head_name: str, training_set: Dataset,
+                        class_weights: np.ndarray) -> DeltaTrainerHead:
     delta_radius = create_delta_radius(args)
     if args.positive_weight_delta:
-        weight_creator = DeltaWeightCreator(
-            training_set, delta_radius, args.positive_weight_delta,
-            class_weights)
+        weight_creator = DeltaWeightCreator(training_set, delta_radius,
+                                            args.positive_weight_delta,
+                                            class_weights)
     else:
-        weight_creator = SampledWeightCreator(
-            delta_radius, args.sampling_negative_rate_delta)
+        weight_creator = SampledWeightCreator(delta_radius,
+                                              args.sampling_negative_rate_delta)
     num_classes = len(class_weights)
-    delta_predictor_head = _delta_predictor_head(
-        args, head_name, num_classes, delta_radius)
+    delta_predictor_head = _delta_predictor_head(args, head_name, num_classes,
+                                                 delta_radius)
     return DeltaTrainerHead(delta_predictor_head, weight_creator)
 
 
-def _delta_aux_trainer_head(
-        args: SharedArgs, head_name: str, training_set: Dataset,
-        class_weights: np.ndarray) -> DeltaAuxTrainerHead:
+def _delta_aux_trainer_head(args: SharedArgs, head_name: str,
+                            training_set: Dataset,
+                            class_weights: np.ndarray) -> DeltaAuxTrainerHead:
     delta_radii = [args.frame_rate * s for s in DELTA_AUX_RADII_IN_SECONDS]
     if args.positive_weight_delta:
         weight_creators = [
-            DeltaWeightCreator(
-                training_set, radius, args.positive_weight_delta,
-                class_weights)
-            for radius in delta_radii
+            DeltaWeightCreator(training_set, radius, args.positive_weight_delta,
+                               class_weights) for radius in delta_radii
         ]
     else:
         identity_weight_creator = IdentityWeightCreator(class_weights)
@@ -748,9 +756,8 @@ def _delta_aux_trainer_head(
     return DeltaAuxTrainerHead(delta_aux_predictor_head, weight_creators)
 
 
-def _delta_predictor_head(
-        args: SharedArgs, head_name: str, num_classes: int,
-        delta_radius: float) -> DeltaPredictorHeadInterface:
+def _delta_predictor_head(args: SharedArgs, head_name: str, num_classes: int,
+                          delta_radius: float) -> DeltaPredictorHeadInterface:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     batch_norm = bool(args.batch_norm)
     # Did a single experiment, where Huber loss seems to be doing better on the
@@ -759,44 +766,47 @@ def _delta_predictor_head(
     huber_base_loss = create_huber_base_loss(args.huber_delta)
     if args.cyclic_delta:
         delta_loss = CyclicDeltaLoss(args.delta_weight, huber_base_loss)
-        return CyclicDeltaPredictorHead(
-            head_name, delta_radius, delta_loss, num_chunk_frames, num_classes,
-            args.layer_weight_decay, batch_norm, args.dropout, args.width,
-            args.head_layers, DELTA_ZERO_INITIALIZE)
+        return CyclicDeltaPredictorHead(head_name, delta_radius, delta_loss,
+                                        num_chunk_frames, num_classes,
+                                        args.layer_weight_decay, batch_norm,
+                                        args.dropout, args.width,
+                                        args.head_layers, DELTA_ZERO_INITIALIZE)
     else:
         delta_loss = DeltaLoss(args.delta_weight, huber_base_loss)
-        return DeltaPredictorHead(
-            head_name, delta_radius, delta_loss, num_chunk_frames, num_classes,
-            args.layer_weight_decay, batch_norm, args.dropout, args.width,
-            args.head_layers, DELTA_ZERO_INITIALIZE)
+        return DeltaPredictorHead(head_name, delta_radius, delta_loss,
+                                  num_chunk_frames, num_classes,
+                                  args.layer_weight_decay, batch_norm,
+                                  args.dropout, args.width, args.head_layers,
+                                  DELTA_ZERO_INITIALIZE)
 
 
-def _delta_aux_predictor_head(
-        args: SharedArgs, head_name: str, num_classes: int,
-        radii: List[float]) -> DeltaAuxPredictorHead:
+def _delta_aux_predictor_head(args: SharedArgs, head_name: str,
+                              num_classes: int,
+                              radii: List[float]) -> DeltaAuxPredictorHead:
     huber_base_loss = create_huber_base_loss(args.huber_delta)
-    delta_aux_loss = CyclicDeltaAuxLoss(
-        args.delta_aux_weight, huber_base_loss, len(radii))
+    delta_aux_loss = CyclicDeltaAuxLoss(args.delta_aux_weight, huber_base_loss,
+                                        len(radii))
     batch_norm = bool(args.batch_norm)
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
-    return DeltaAuxPredictorHead(
-        head_name, radii, delta_aux_loss, num_chunk_frames, num_classes,
-        args.layer_weight_decay, batch_norm, args.dropout, args.width,
-        args.head_layers, DELTA_ZERO_INITIALIZE)
+    return DeltaAuxPredictorHead(head_name, radii, delta_aux_loss,
+                                 num_chunk_frames, num_classes,
+                                 args.layer_weight_decay, batch_norm,
+                                 args.dropout, args.width, args.head_layers,
+                                 DELTA_ZERO_INITIALIZE)
 
 
 def _confidence_predictor_head(
-        args: SharedArgs, head_name: str, num_classes: int,
-        confidence_class_counts: Optional[ConfidenceClassCounts]
+    args: SharedArgs, head_name: str, num_classes: int,
+    confidence_class_counts: Optional[ConfidenceClassCounts]
 ) -> ConfidencePredictorHead:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     batch_norm = bool(args.batch_norm)
-    confidence_loss = ConfidenceLoss(
-        args.confidence_weight, args.focusing_gamma)
-    return ConfidencePredictorHead(
-        head_name, num_chunk_frames, num_classes, confidence_loss,
-        args.layer_weight_decay, batch_norm, args.dropout, args.width,
-        args.head_layers, confidence_class_counts)
+    confidence_loss = ConfidenceLoss(args.confidence_weight,
+                                     args.focusing_gamma)
+    return ConfidencePredictorHead(head_name, num_chunk_frames, num_classes,
+                                   confidence_loss, args.layer_weight_decay,
+                                   batch_norm, args.dropout, args.width,
+                                   args.head_layers, confidence_class_counts)
 
 
 def _confidence_aux_predictor_head(
@@ -804,12 +814,13 @@ def _confidence_aux_predictor_head(
         radii: List[float]) -> ConfidenceAuxPredictorHead:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     batch_norm = bool(args.batch_norm)
-    confidence_aux_loss = ConfidenceAuxLoss(
-        args.confidence_aux_weight, args.focusing_gamma, len(radii))
-    return ConfidenceAuxPredictorHead(
-        head_name, radii, num_chunk_frames, num_classes, confidence_aux_loss,
-        args.layer_weight_decay, batch_norm, args.dropout, args.width,
-        args.head_layers)
+    confidence_aux_loss = ConfidenceAuxLoss(args.confidence_aux_weight,
+                                            args.focusing_gamma, len(radii))
+    return ConfidenceAuxPredictorHead(head_name, radii, num_chunk_frames,
+                                      num_classes, confidence_aux_loss,
+                                      args.layer_weight_decay, batch_norm,
+                                      args.dropout, args.width,
+                                      args.head_layers)
 
 
 def _segmentation_trainer_head(
@@ -825,30 +836,28 @@ def _segmentation_trainer_head(
     return SegmentationTrainerHead(segmentation_predictor_head, weight_creator)
 
 
-def _segmentation_predictor_head(
-        args: SharedArgs, head_name: str,
-        num_classes: int) -> SegmentationPredictorHead:
+def _segmentation_predictor_head(args: SharedArgs, head_name: str,
+                                 num_classes: int) -> SegmentationPredictorHead:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     batch_norm = bool(args.batch_norm)
-    segmentation_loss = SegmentationLoss(
-        args.segmentation_weight, args.focusing_gamma)
-    return SegmentationPredictorHead(
-        head_name, num_chunk_frames, num_classes, segmentation_loss,
-        args.layer_weight_decay, batch_norm, args.dropout, args.width,
-        args.head_layers)
+    segmentation_loss = SegmentationLoss(args.segmentation_weight,
+                                         args.focusing_gamma)
+    return SegmentationPredictorHead(head_name, num_chunk_frames, num_classes,
+                                     segmentation_loss, args.layer_weight_decay,
+                                     batch_norm, args.dropout, args.width,
+                                     args.head_layers)
 
 
 def _video_chunk_iterator_provider(
-        args: SharedArgs, chunk_prediction_border: float
-) -> VideoChunkIteratorProvider:
+        args: SharedArgs,
+        chunk_prediction_border: float) -> VideoChunkIteratorProvider:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     num_border_frames = _num_border_frames(args, chunk_prediction_border)
     return VideoChunkIteratorProvider(num_chunk_frames, num_border_frames)
 
 
-def _create_keras_model(
-        args: SharedArgs, input_shape: InputShape,
-        predictor_heads: List[PredictorHeadInterface]) -> Model:
+def _create_keras_model(args: SharedArgs, input_shape: InputShape,
+                        predictor_heads: List[PredictorHeadInterface]) -> Model:
     main_input = create_main_input(input_shape)
     if args.input_weight_decay is None:
         input_weight_decay = args.layer_weight_decay
@@ -857,34 +866,35 @@ def _create_keras_model(
     num_reduction_out_channels = args.reduction_width_factor * args.width
     num_chunk_frames = input_shape[0]
     num_features = input_shape[1]
-    input_reduction_out = input_reduction(
-        main_input, num_features, num_reduction_out_channels,
-        input_weight_decay, args.batch_norm, args.dropout)
-    nodes = _create_backbone(
-        args, num_chunk_frames, num_reduction_out_channels, input_reduction_out)
+    input_reduction_out = input_reduction(main_input, num_features,
+                                          num_reduction_out_channels,
+                                          input_weight_decay, args.batch_norm,
+                                          args.dropout)
+    nodes = _create_backbone(args, num_chunk_frames, num_reduction_out_channels,
+                             input_reduction_out)
     output_tensors = _create_output_tensors(predictor_heads, nodes)
     model = Model(main_input, output_tensors)
     maybe_convert_model_to_sam(model, args.sam_rho, SAM_EPSILON)
     return model
 
 
-def _create_backbone(
-        args: SharedArgs, num_chunk_frames: int,
-        num_reduction_out_channels: int, input_reduction_out: Tensor) -> Nodes:
+def _create_backbone(args: SharedArgs, num_chunk_frames: int,
+                     num_reduction_out_channels: int,
+                     input_reduction_out: Tensor) -> Nodes:
     if args.backbone == BACKBONE_UNET:
-        return _unet_backbone(
-            args, input_reduction_out, num_reduction_out_channels)
+        return _unet_backbone(args, input_reduction_out,
+                              num_reduction_out_channels)
     elif args.backbone == BACKBONE_TRANSFORMER_ENCODER:
-        return _transformer_encoder_backbone(
-            args, input_reduction_out, num_reduction_out_channels,
-            num_chunk_frames)
+        return _transformer_encoder_backbone(args, input_reduction_out,
+                                             num_reduction_out_channels,
+                                             num_chunk_frames)
     else:
         raise ValueError(f"Unrecognized value for backbone: {args.backbone}")
 
 
-def _transformer_encoder_backbone(
-        args: SharedArgs, input_reduction_out: Tensor,
-        num_reduction_out_channels: int, num_chunk_frames: int) -> Nodes:
+def _transformer_encoder_backbone(args: SharedArgs, input_reduction_out: Tensor,
+                                  num_reduction_out_channels: int,
+                                  num_chunk_frames: int) -> Nodes:
     if args.transformer_hidden_groups == 0:
         hidden_groups = args.transformer_hidden_layers
     else:
@@ -906,37 +916,38 @@ def _transformer_encoder_backbone(
         intermediate_size=args.transformer_intermediate_size,
         activation_dropout=TRANSFORMER_ACTIVATION_DROPOUT,
         positional_embedding=TRANSFORMER_POSITIONAL_EMBEDDING,
-        convolutional_positional_embedding_kernel=TRANSFORMER_CONVOLUTIONAL_POSITIONAL_EMBEDDING_KERNEL,
-        convolutional_positional_embedding_groups=TRANSFORMER_CONVOLUTIONAL_POSITIONAL_EMBEDDING_GROUPS,
-        convolutional_positional_embedding_activation=TRANSFORMER_CONVOLUTIONAL_POSITION_EMBEDDING_ACTIVATION,
+        convolutional_positional_embedding_kernel=
+        TRANSFORMER_CONVOLUTIONAL_POSITIONAL_EMBEDDING_KERNEL,
+        convolutional_positional_embedding_groups=
+        TRANSFORMER_CONVOLUTIONAL_POSITIONAL_EMBEDDING_GROUPS,
+        convolutional_positional_embedding_activation=
+        TRANSFORMER_CONVOLUTIONAL_POSITION_EMBEDDING_ACTIVATION,
         name=TRANSFORMER_ENCODER_NAME)
-    return create_transformer_encoder_backbone(
-        transformer_encoder_config, input_reduction_out)
+    return create_transformer_encoder_backbone(transformer_encoder_config,
+                                               input_reduction_out)
 
 
-def _unet_backbone(
-        args: SharedArgs, input_reduction_out: Tensor,
-        num_reduction_out_channels: int) -> Nodes:
+def _unet_backbone(args: SharedArgs, input_reduction_out: Tensor,
+                   num_reduction_out_channels: int) -> Nodes:
     unet_weight_decay = args.layer_weight_decay
-    bottom_up_layers = _unet_bottom_up_layers(
-        args, input_reduction_out, num_reduction_out_channels,
-        unet_weight_decay)
+    bottom_up_layers = _unet_bottom_up_layers(args, input_reduction_out,
+                                              num_reduction_out_channels,
+                                              unet_weight_decay)
     top_down_stack = _unet_top_down_stack(args, unet_weight_decay)
-    return create_unet_backbone(
-        bottom_up_layers, args.unet_layers_start, args.unet_layers_end,
-        top_down_stack)
+    return create_unet_backbone(bottom_up_layers, args.unet_layers_start,
+                                args.unet_layers_end, top_down_stack)
 
 
-def _unet_top_down_stack(
-        args: SharedArgs,
-        unet_weight_decay: float) -> TopDownStackInterface:
+def _unet_top_down_stack(args: SharedArgs,
+                         unet_weight_decay: float) -> TopDownStackInterface:
     pre_activated = UNET_RESIDUAL_V2
     if args.unet_combiner == UNET_COMBINER_CONCATENATION:
         combiner = ConcatenationCombiner()
     elif args.unet_combiner == UNET_COMBINER_ADDITION:
-        combiner = AdditionCombiner(
-            UNET_ADDITION_COMBINER_PRE_CONVOLVE, unet_weight_decay,
-            args.batch_norm, args.dropout, UNET_ACTIVATION, pre_activated)
+        combiner = AdditionCombiner(UNET_ADDITION_COMBINER_PRE_CONVOLVE,
+                                    unet_weight_decay, args.batch_norm,
+                                    args.dropout, UNET_ACTIVATION,
+                                    pre_activated)
     elif args.unet_combiner == UNET_COMBINER_IGNORE:
         combiner = IgnoreCombiner()
     else:
@@ -947,63 +958,62 @@ def _unet_top_down_stack(
         # since that is more minimalistic. Original u-net paper used 2,
         # but some other implementations I found online used 3 or 4.
         conv_transpose_kernel_size = (2, 1)
-        upsampler = ConvTransposeUpsampler(
-            conv_transpose_kernel_size, "same", unet_weight_decay,
-            args.batch_norm, args.dropout, UNET_ACTIVATION, pre_activated)
+        upsampler = ConvTransposeUpsampler(conv_transpose_kernel_size, "same",
+                                           unet_weight_decay, args.batch_norm,
+                                           args.dropout, UNET_ACTIVATION,
+                                           pre_activated)
     elif args.unet_upsampler == UNET_UPSAMPLER_UPSAMPLING:
         # Tried 2, 3, and 4 here and maybe 2 worked best, but not enough
         # experiments to confirm.
         upsampling_conv_kernel_size = (2, 1)
-        upsampler = UpsamplingUpsampler(
-            UNET_UPSAMPLING_INTERPOLATION, UNET_UPSAMPLING_CONVOLVE,
-            upsampling_conv_kernel_size, "same", unet_weight_decay,
-            args.batch_norm, args.dropout, UNET_ACTIVATION,
-            pre_activated)
+        upsampler = UpsamplingUpsampler(UNET_UPSAMPLING_INTERPOLATION,
+                                        UNET_UPSAMPLING_CONVOLVE,
+                                        upsampling_conv_kernel_size, "same",
+                                        unet_weight_decay, args.batch_norm,
+                                        args.dropout, UNET_ACTIVATION,
+                                        pre_activated)
     else:
         raise ValueError(f"Unknown unetupsampler: {args.unet_upsampler}")
     strided_block = _strided_block(args, UNET_RESIDUAL_V2, unet_weight_decay)
-    convolution_stack = BasicConvolutionStack(
-        strided_block, UNET_TOP_DOWN_STACK_NUM_BLOCKS)
-    return BasicTopDownStack(
-        upsampler, combiner, convolution_stack, pre_activated)
+    convolution_stack = BasicConvolutionStack(strided_block,
+                                              UNET_TOP_DOWN_STACK_NUM_BLOCKS)
+    return BasicTopDownStack(upsampler, combiner, convolution_stack,
+                             pre_activated)
 
 
-def _unet_bottom_up_layers(
-        args: SharedArgs, input_reduction_out: Tensor,
-        base_num_filters: int, unet_weight_decay: float) -> List[BottomUpLayer]:
+def _unet_bottom_up_layers(args: SharedArgs, input_reduction_out: Tensor,
+                           base_num_filters: int,
+                           unet_weight_decay: float) -> List[BottomUpLayer]:
     strided_block = _strided_block(args, UNET_RESIDUAL_V2, unet_weight_decay)
     if UNET_DOWNSAMPLE == UNET_DOWNSAMPLE_STRIDE:
-        bottom_up_stack = StridedBottomUpStack(
-            strided_block, UNET_BOTTOM_UP_STACK_NUM_BLOCKS, False)
+        bottom_up_stack = StridedBottomUpStack(strided_block,
+                                               UNET_BOTTOM_UP_STACK_NUM_BLOCKS,
+                                               False)
     elif (UNET_DOWNSAMPLE == UNET_DOWNSAMPLE_POOLING_MAX or
           UNET_DOWNSAMPLE == UNET_DOWNSAMPLE_POOLING_AVERAGE):
         bottom_up_convolution_stack = BasicConvolutionStack(
             strided_block, UNET_BOTTOM_UP_STACK_NUM_BLOCKS)
-        bottom_up_stack = PoolingBottomUpStack(
-            UNET_DOWNSAMPLE, bottom_up_convolution_stack)
+        bottom_up_stack = PoolingBottomUpStack(UNET_DOWNSAMPLE,
+                                               bottom_up_convolution_stack)
     else:
         raise ValueError(f"UNET_DOWNSAMPLE not recognized: {UNET_DOWNSAMPLE}")
-    return create_bottom_up_layers(
-        input_reduction_out, args.unet_layers_end, base_num_filters,
-        UNET_MAX_FILTERS, bottom_up_stack)
+    return create_bottom_up_layers(input_reduction_out, args.unet_layers_end,
+                                   base_num_filters, UNET_MAX_FILTERS,
+                                   bottom_up_stack)
 
 
-def _strided_block(
-        args: SharedArgs, unet_residual_v2: bool,
-        unet_weight_decay: float) -> StridedBlockInterface:
+def _strided_block(args: SharedArgs, unet_residual_v2: bool,
+                   unet_weight_decay: float) -> StridedBlockInterface:
     if unet_residual_v2:
-        return ResidualBlockV2(
-            UNET_BLOCK_NUM_CONVOLUTIONS, bool(args.skip_init),
-            UNET_BLOCK_BOTTLENECK, unet_weight_decay, args.batch_norm,
-            args.dropout)
+        return ResidualBlockV2(UNET_BLOCK_NUM_CONVOLUTIONS,
+                               bool(args.skip_init), UNET_BLOCK_BOTTLENECK,
+                               unet_weight_decay, args.batch_norm, args.dropout)
     else:
-        return ResidualBlock(
-            UNET_BLOCK_NUM_CONVOLUTIONS, UNET_BLOCK_BOTTLENECK,
-            unet_weight_decay, args.batch_norm, args.dropout)
+        return ResidualBlock(UNET_BLOCK_NUM_CONVOLUTIONS, UNET_BLOCK_BOTTLENECK,
+                             unet_weight_decay, args.batch_norm, args.dropout)
 
 
-def _num_border_frames(
-        args: SharedArgs, chunk_prediction_border: float) -> int:
+def _num_border_frames(args: SharedArgs, chunk_prediction_border: float) -> int:
     num_chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     if args.profile:
         # Make the number of border frames be as large as possible, so that
@@ -1014,18 +1024,18 @@ def _num_border_frames(
     min_num_accepted_prediction_frames = math.floor(
         args.frame_rate * MIN_ACCEPTED_PREDICTION_SECONDS)
     max_num_border_frames = (
-            (num_chunk_frames - min_num_accepted_prediction_frames) // 2)
-    desired_num_border_frames = math.ceil(
-        args.frame_rate * chunk_prediction_border)
+        (num_chunk_frames - min_num_accepted_prediction_frames) // 2)
+    desired_num_border_frames = math.ceil(args.frame_rate *
+                                          chunk_prediction_border)
     return min(desired_num_border_frames, max_num_border_frames)
 
 
-def _create_output_tensors(
-        predictor_heads: List[PredictorHeadInterface],
-        nodes: Nodes) -> List[Tensor]:
+def _create_output_tensors(predictor_heads: List[PredictorHeadInterface],
+                           nodes: Nodes) -> List[Tensor]:
     return [
         predictor_head.create_tensor(nodes)
-        for predictor_head in predictor_heads]
+        for predictor_head in predictor_heads
+    ]
 
 
 def _load_model(args: SharedArgs, model_path: str) -> Model:

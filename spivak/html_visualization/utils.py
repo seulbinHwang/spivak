@@ -76,13 +76,13 @@ def create_custom_category_settings(
     category_order = {COLUMN_CLASS: categories}
     discrete_color_map = {
         category: plotly_colors[category_index]
-        for category_index, category in enumerate(categories)}
+        for category_index, category in enumerate(categories)
+    }
     return CategorySettings(category_order, discrete_color_map)
 
 
-def add_video(
-        html_file: TextIO, video_html_relative_path: Path,
-        video_id: str) -> None:
+def add_video(html_file: TextIO, video_html_relative_path: Path,
+              video_id: str) -> None:
     _add_video_to_file(html_file, video_html_relative_path, video_id)
     html_file.write('\n<br>\n')
 
@@ -96,15 +96,15 @@ def adjust_subplot_xaxes(fig: Figure, n_categories: int) -> None:
     fig.update_xaxes(showticklabels=True, row=n_categories, col=1)
 
 
-def extract_locations(
-        category_data_frame: DataFrame, column: str, y_value: float):
+def extract_locations(category_data_frame: DataFrame, column: str,
+                      y_value: float):
     x = category_data_frame[COLUMN_TIME][category_data_frame[column] == 1]
     y = y_value * np.ones(len(x))
     return x, y
 
 
-def _add_video_to_file(
-        html_file: TextIO, video_html_relative_path: Path, video_id: str) -> None:
+def _add_video_to_file(html_file: TextIO, video_html_relative_path: Path,
+                       video_id: str) -> None:
     html_file.write(VIDEO_TEMPLATE.format(video_id, video_html_relative_path))
 
 

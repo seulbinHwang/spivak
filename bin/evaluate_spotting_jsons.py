@@ -52,16 +52,21 @@ def main() -> None:
     tolerances_config = read_tolerances_config(config_dir)
     logging.info("Going to run spotting evaluation")
     spotting_evaluation = run_spotting_evaluation(
-        detections, labels, tolerances_config, EVALUATION_FRAME_RATE,
-        spotting_label_map.num_classes(), prune_classes=False,
-        create_confusion_data_frame=True, label_map=spotting_label_map)
+        detections,
+        labels,
+        tolerances_config,
+        EVALUATION_FRAME_RATE,
+        spotting_label_map.num_classes(),
+        prune_classes=False,
+        create_confusion_data_frame=True,
+        label_map=spotting_label_map)
     output_dir = Path(args[ARGS_OUTPUT_DIR])
     _save_and_log_spotting_evaluation(spotting_evaluation, output_dir)
 
 
 def _read_spotting_detections_and_labels(
-        args: Dict, num_classes: int
-) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+        args: Dict,
+        num_classes: int) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     splits_dir = Path(args[ARGS_SPLITS_DIR])
     results_dir = Path(args[ARGS_RESULTS_DIR])
     labels_dir = Path(args[ARGS_LABELS_DIR])
@@ -73,9 +78,8 @@ def _read_spotting_detections_and_labels(
     # For evaluation purposes, we currently get the video lengths from the
     # feature files, so we need to know the features_dir, feature_type and
     # frame-rate here.
-    game_paths_reader = GamePathsReader(
-        SOCCERNET_TYPE, EVALUATION_FEATURE_NAME, features_dir, labels_dir,
-        splits_dir)
+    game_paths_reader = GamePathsReader(SOCCERNET_TYPE, EVALUATION_FEATURE_NAME,
+                                        features_dir, labels_dir, splits_dir)
     valid_game_paths = game_paths_reader.read_valid(SPLIT_KEY_TEST)
     detections = []
     labels = []
@@ -120,13 +124,13 @@ def _spotting_detections_path(detections_dir: Path) -> Path:
     return glob_result[0]
 
 
-def _save_and_log_spotting_evaluation(
-        spotting_evaluation: SpottingEvaluation, output_dir: Path):
+def _save_and_log_spotting_evaluation(spotting_evaluation: SpottingEvaluation,
+                                      output_dir: Path):
     logging.info(f"Average-mAP V2: {spotting_evaluation.average_map_dict}")
     evaluation_dir = output_dir / "Evaluation"
     evaluation_dir.mkdir(exist_ok=True, parents=True)
-    evaluation = EvaluationAggregate(
-        spotting_evaluation, segmentation_evaluation=None)
+    evaluation = EvaluationAggregate(spotting_evaluation,
+                                     segmentation_evaluation=None)
     logging.info("Evaluation result")
     logging.info(evaluation)
     evaluation.save_txt(str(evaluation_dir))
@@ -135,24 +139,26 @@ def _save_and_log_spotting_evaluation(
 
 def _get_command_line_arguments() -> Dict:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--" + ARGS_RESULTS_DIR,
+                        required=True,
+                        help='Input directory containing JSON results')
+    parser.add_argument("--" + ARGS_FEATURES_DIR,
+                        required=True,
+                        help='Input directory containing features')
+    parser.add_argument("--" + ARGS_LABELS_DIR,
+                        required=True,
+                        help='Input directory containing labels')
     parser.add_argument(
-        "--" + ARGS_RESULTS_DIR, required=True,
-        help='Input directory containing JSON results')
-    parser.add_argument(
-        "--" + ARGS_FEATURES_DIR, required=True,
-        help='Input directory containing features')
-    parser.add_argument(
-        "--" + ARGS_LABELS_DIR, required=True,
-        help='Input directory containing labels')
-    parser.add_argument(
-        "--" + ARGS_SPLITS_DIR, required=True,
+        "--" + ARGS_SPLITS_DIR,
+        required=True,
         help="Directory containing file(s) with splits definitions.")
     parser.add_argument(
-        "--" + ARGS_OUTPUT_DIR, required=True,
+        "--" + ARGS_OUTPUT_DIR,
+        required=True,
         help="Output directory, for saving the evaluation result files.")
-    parser.add_argument(
-        "--" + ARGS_CONFIG_DIR, required=True,
-        help="Directory with configuration files")
+    parser.add_argument("--" + ARGS_CONFIG_DIR,
+                        required=True,
+                        help="Directory with configuration files")
     args_dict = vars(parser.parse_args())
     return args_dict
 

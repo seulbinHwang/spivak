@@ -57,9 +57,8 @@ MODULE_KERAS_LAYER_SERIALIZATION = \
 
 class EvaluationRun:
 
-    def __init__(
-            self, evaluation: EvaluationAggregate,
-            args: Optional[SharedArgs]) -> None:
+    def __init__(self, evaluation: EvaluationAggregate,
+                 args: Optional[SharedArgs]) -> None:
         self.evaluation = evaluation
         self.train_args = args
 
@@ -84,15 +83,14 @@ def compute_validation_result(args, best_metric, epoch):
 
 
 def filter_keras_warnings() -> None:
-    warnings.filterwarnings(
-        action="ignore", module=MODULE_KERAS_GENERIC_UTILS)
-    warnings.filterwarnings(
-        action="ignore", module=MODULE_KERAS_ENGINE_FUNCTIONAL)
-    warnings.filterwarnings(
-        action="ignore", module=MODULE_KERAS_LAYER_SERIALIZATION)
-    warnings.filterwarnings(
-        action="ignore", category=UserWarning,
-        module=MODULE_KERAS_ENGINE_TRAINING)
+    warnings.filterwarnings(action="ignore", module=MODULE_KERAS_GENERIC_UTILS)
+    warnings.filterwarnings(action="ignore",
+                            module=MODULE_KERAS_ENGINE_FUNCTIONAL)
+    warnings.filterwarnings(action="ignore",
+                            module=MODULE_KERAS_LAYER_SERIALIZATION)
+    warnings.filterwarnings(action="ignore",
+                            category=UserWarning,
+                            module=MODULE_KERAS_ENGINE_TRAINING)
 
 
 def save_evaluation_run(evaluation_run: EvaluationRun, save_dir: str) -> None:
@@ -102,16 +100,16 @@ def save_evaluation_run(evaluation_run: EvaluationRun, save_dir: str) -> None:
 
 
 def read_validation_evaluation_run(save_dir: str) -> Optional[EvaluationRun]:
-    save_path = os.path.join(
-        save_dir, VALIDATION_EVALUATION_DIR, EVALUATION_RUN_PICKLE_FILE_NAME)
+    save_path = os.path.join(save_dir, VALIDATION_EVALUATION_DIR,
+                             EVALUATION_RUN_PICKLE_FILE_NAME)
     if not os.path.exists(save_path):
         return None
     with open(save_path, "rb") as pkl_file:
         return pickle.load(pkl_file)
 
 
-def create_evaluation(
-        args: SharedArgs, best_metric: float) -> EvaluationAggregate:
+def create_evaluation(args: SharedArgs,
+                      best_metric: float) -> EvaluationAggregate:
     label_maps = create_label_maps(args)
     model_dir = args.model
     last_model_path = os.path.join(model_dir, LAST_MODEL_DIR)
@@ -124,8 +122,8 @@ def create_evaluation(
     # Get the path for saving the latest validation result. For consistency
     # with the folder structure in best_model_path, we put the validation
     # results inside the last_model_path folder.
-    validation_evaluation_dir = os.path.join(
-        last_model_path, VALIDATION_EVALUATION_DIR)
+    validation_evaluation_dir = os.path.join(last_model_path,
+                                             VALIDATION_EVALUATION_DIR)
     os.makedirs(validation_evaluation_dir, exist_ok=True)
     save_evaluation_run(evaluation_run, validation_evaluation_dir)
     evaluation.save_txt(validation_evaluation_dir)
@@ -143,25 +141,24 @@ def create_evaluation(
             best_model_path, VALIDATION_EVALUATION_DIR)
         if os.path.exists(best_validation_evaluation_dir):
             shutil.rmtree(best_validation_evaluation_dir)
-        shutil.copytree(
-            validation_evaluation_dir, best_validation_evaluation_dir)
+        shutil.copytree(validation_evaluation_dir,
+                        best_validation_evaluation_dir)
         logging.info(" *** Done saving models and evaluation files.")
     else:
-        logging.info(
-            f"Validation metric ({evaluation.main_metric_name}): "
-            f"{evaluation.main_metric}")
+        logging.info(f"Validation metric ({evaluation.main_metric_name}): "
+                     f"{evaluation.main_metric}")
     return evaluation
 
 
 def create_all_video_outputs(
-        video_data: List[VideoDatum], predictor: PredictorInterface
-) -> List[VideoOutputs]:
+        video_data: List[VideoDatum],
+        predictor: PredictorInterface) -> List[VideoOutputs]:
     return [predictor.predict_video(video_datum) for video_datum in video_data]
 
 
-def create_detections_and_targets(
-        video_data: List[VideoDatum], all_video_outputs: List[VideoOutputs],
-        flexible_nms: FlexibleNonMaximumSuppression):
+def create_detections_and_targets(video_data: List[VideoDatum],
+                                  all_video_outputs: List[VideoOutputs],
+                                  flexible_nms: FlexibleNonMaximumSuppression):
     detections = []
     targets = []
     # Loop over all the data and labels
@@ -188,14 +185,14 @@ def create_detections_and_targets(
     return detections, targets
 
 
-def _run_evaluation(
-        args: SharedArgs, predictor: PredictorInterface,
-        label_maps: Dict[Task, LabelMap]) -> EvaluationAggregate:
+def _run_evaluation(args: SharedArgs, predictor: PredictorInterface,
+                    label_maps: Dict[Task, LabelMap]) -> EvaluationAggregate:
     validation_set = create_dataset(args, SPLIT_KEY_VALIDATION, label_maps)
-    all_video_outputs = create_all_video_outputs(
-        validation_set.video_data, predictor)
-    spotting_evaluation = _spotting_evaluation(
-        args, validation_set, all_video_outputs, label_maps.get(Task.SPOTTING))
+    all_video_outputs = create_all_video_outputs(validation_set.video_data,
+                                                 predictor)
+    spotting_evaluation = _spotting_evaluation(args, validation_set,
+                                               all_video_outputs,
+                                               label_maps.get(Task.SPOTTING))
     segmentation_evaluation = _segmentation_evaluation(
         validation_set, all_video_outputs, label_maps.get(Task.SEGMENTATION))
     return EvaluationAggregate(spotting_evaluation, segmentation_evaluation)
@@ -203,8 +200,8 @@ def _run_evaluation(
 
 def _spotting_evaluation(
         args: SharedArgs, validation_set: Dataset,
-        all_video_outputs: List[VideoOutputs], label_map: Optional[LabelMap]
-) -> Optional[SpottingEvaluation]:
+        all_video_outputs: List[VideoOutputs],
+        label_map: Optional[LabelMap]) -> Optional[SpottingEvaluation]:
     if not label_map:
         return None
     existing_output_keys = all_video_outputs[0].keys()
@@ -219,9 +216,13 @@ def _spotting_evaluation(
     config_dir = dir_str_to_path(args.config_dir)
     tolerances_config = read_tolerances_config(config_dir)
     return run_spotting_evaluation(
-        detections, targets, tolerances_config, args.frame_rate,
+        detections,
+        targets,
+        tolerances_config,
+        args.frame_rate,
         validation_set.num_classes_from_task[Task.SPOTTING],
-        bool(args.prune_classes), create_confusion_data_frame=False,
+        bool(args.prune_classes),
+        create_confusion_data_frame=False,
         label_map=label_map)
 
 
@@ -238,17 +239,20 @@ def _segmentation_evaluation(
     return create_segmentation_evaluation(segmentations, labels, label_map)
 
 
-def _create_segmentations_and_labels(
-        video_data: List[VideoDatum], all_video_outputs: List[VideoOutputs]):
+def _create_segmentations_and_labels(video_data: List[VideoDatum],
+                                     all_video_outputs: List[VideoOutputs]):
     labels_are_valid = [
         video_datum.valid_labels(Task.SEGMENTATION)
-        for video_datum in video_data]
+        for video_datum in video_data
+    ]
     valid_segmentations = [
         video_outputs[OUTPUT_SEGMENTATION]
         for video_outputs, valid in zip(all_video_outputs, labels_are_valid)
-        if valid]
+        if valid
+    ]
     valid_labels = [
         video_datum.labels(Task.SEGMENTATION)
         for video_datum, valid in zip(video_data, labels_are_valid)
-        if valid]
+        if valid
+    ]
     return valid_segmentations, valid_labels

@@ -48,7 +48,8 @@ BAIDU_TWO_FEATURE_NAME = "baidu_2.0"
 AVERAGED_CONFIDENCE = "averaged_confidence"
 CONCATENATED_CONFIDENCE_FEATURES_DIR = "concatenated_confidence"
 CONCATENATION_FEATURE_NAMES_BAIDU_RESNET = [
-    BAIDU_TWO_FEATURE_NAME, RESNET_NORMALIZED_FEATURE_NAME]
+    BAIDU_TWO_FEATURE_NAME, RESNET_NORMALIZED_FEATURE_NAME
+]
 MEMORY_TRAIN_PARAMETERS = {
     MEMORY_SETUP_256GB: {
         BAIDU_TWO_FEATURE_NAME: {},
@@ -58,11 +59,11 @@ MEMORY_TRAIN_PARAMETERS = {
         # TODO: Experiment with higher cpm (chunks per minute) to increase
         #  speed at the cost of less mixing of chunks across videos.
         BAIDU_TWO_FEATURE_NAME: {
-            "-cds": "0",    # Don't cache the dataset
+            "-cds": "0",  # Don't cache the dataset
             "-cpm": "2.0",  # Sample more chunks each time the features are read
             "-cs": "0.08",  # Use a smaller buffer to shuffle the chunks
-            "-sv": "1",     # Shuffle the videos
-            "-gcp": "0"     # Remove parallelism from chunk creation
+            "-sv": "1",  # Shuffle the videos
+            "-gcp": "0"  # Remove parallelism from chunk creation
         },
         # We're already under 64GB when training with the normalized ResNet
         # features, so no tweaking is needed here.
@@ -200,69 +201,70 @@ TRAIN_HYPERPARAMETERS = {
 
 def command_resample_baidu(
         baidu_features_dir: str = BAIDU_FEATURES_DIR,
-        baidu_two_features_dir: str = BAIDU_TWO_FEATURES_DIR
-) -> Command:
+        baidu_two_features_dir: str = BAIDU_TWO_FEATURES_DIR) -> Command:
     return Command(
-        "Resample baidu features to 2.0 frames per second", SCRIPT_TRANSFORM,
-        {
+        "Resample baidu features to 2.0 frames per second", SCRIPT_TRANSFORM, {
             f"--{TransformArgs.INPUT_DIRS}": baidu_features_dir,
             f"--{TransformArgs.INPUT_FEATURE_NAMES}": "baidu_soccer_embeddings",
             f"--{TransformArgs.OUTPUT_DIR}": baidu_two_features_dir,
             f"--{TransformArgs.OUTPUT_FEATURE_NAME}": BAIDU_TWO_FEATURE_NAME,
             f"--{TransformArgs.FACTORS}": "2.0",
             f"--{TransformArgs.RESAMPLING}": "interpolate"
-        }
-    )
+        })
 
 
 def commands_normalize_resnet(
         resnet_features_dir: str = RESNET_FEATURES_DIR,
         resnet_normalized_features_dir: str = RESNET_NORMALIZED_FEATURES_DIR,
         models_dir: str = MODELS_DIR,
-        splits_dir: str = SPLITS_DIR
-) -> List[Command]:
+        splits_dir: str = SPLITS_DIR) -> List[Command]:
     normalizer_path = os.path.join(models_dir, RESNET_NORMALIZER_PKL)
     create_normalizer_command = Command(
         "Create a normalizer for the ResNet features", SCRIPT_CREATE_NORMALIZER,
         {
-            f"--{CreateNormalizerArgs.FEATURES_DIR}": resnet_features_dir,
-            f"--{CreateNormalizerArgs.SPLITS_DIR}": splits_dir,
-            f"--{CreateNormalizerArgs.NORMALIZER}": NORMALIZER_MAX_ABS,
+            f"--{CreateNormalizerArgs.FEATURES_DIR}":
+                resnet_features_dir,
+            f"--{CreateNormalizerArgs.SPLITS_DIR}":
+                splits_dir,
+            f"--{CreateNormalizerArgs.NORMALIZER}":
+                NORMALIZER_MAX_ABS,
             f"--{CreateNormalizerArgs.FEATURE_NAME}":
                 SOCCERNET_FEATURE_NAME_RESNET_TF2,
-            f"--{CreateNormalizerArgs.OUT_PATH}": normalizer_path,
-        }
-    )
+            f"--{CreateNormalizerArgs.OUT_PATH}":
+                normalizer_path,
+        })
     normalize_features_command = Command(
         "Normalize the ResNet features with the learned normalizer",
         SCRIPT_TRANSFORM,
         {
-            f"--{TransformArgs.INPUT_DIRS}": resnet_features_dir,
+            f"--{TransformArgs.INPUT_DIRS}":
+                resnet_features_dir,
             f"--{TransformArgs.INPUT_FEATURE_NAMES}":
                 SOCCERNET_FEATURE_NAME_RESNET_TF2,
-            f"--{TransformArgs.OUTPUT_DIR}": resnet_normalized_features_dir,
+            f"--{TransformArgs.OUTPUT_DIR}":
+                resnet_normalized_features_dir,
             f"--{TransformArgs.OUTPUT_FEATURE_NAME}":
                 RESNET_NORMALIZED_FEATURE_NAME,
-            f"--{TransformArgs.NORMALIZERS}": normalizer_path,
-            f"--{TransformArgs.FACTORS}": "1.0",  # Won't resample
-            f"--{TransformArgs.RESAMPLING}": "interpolate",
-        }
-    )
+            f"--{TransformArgs.NORMALIZERS}":
+                normalizer_path,
+            f"--{TransformArgs.FACTORS}":
+                "1.0",  # Won't resample
+            f"--{TransformArgs.RESAMPLING}":
+                "interpolate",
+        })
     return [create_normalizer_command, normalize_features_command]
 
 
-def commands_spotting_test(
-        specific_features_dir: str,
-        feature_name: str,
-        do_nms_comparison: bool = False,
-        run_name: str = RUN_NAME,
-        results_dir: str = RESULTS_DIR,
-        models_dir: str = MODELS_DIR,
-        labels_dir: str = LABELS_DIR,
-        splits_dir: str = SPLITS_DIR,
-        base_config_dir: str = BASE_CONFIG_DIR,
-        memory_setup: str = MEMORY_SETUP
-) -> List[Command]:
+def commands_spotting_test(specific_features_dir: str,
+                           feature_name: str,
+                           do_nms_comparison: bool = False,
+                           run_name: str = RUN_NAME,
+                           results_dir: str = RESULTS_DIR,
+                           models_dir: str = MODELS_DIR,
+                           labels_dir: str = LABELS_DIR,
+                           splits_dir: str = SPLITS_DIR,
+                           base_config_dir: str = BASE_CONFIG_DIR,
+                           memory_setup: str = MEMORY_SETUP) -> List[Command]:
     dataset_type = DATASET_TYPE_SOCCERNET_V2
     protocol_name = SPOTTING_TEST
     confidence_and_delta_validated_train_commands = \
@@ -298,8 +300,7 @@ def commands_spotting_challenge_validated(
         labels_dir: str = LABELS_DIR,
         splits_dir: str = SPLITS_DIR,
         base_config_dir: str = BASE_CONFIG_DIR,
-        memory_setup: str = MEMORY_SETUP
-) -> List[Command]:
+        memory_setup: str = MEMORY_SETUP) -> List[Command]:
     dataset_type = DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION
     protocol_name = SPOTTING_CHALLENGE_VALIDATED
     confidence_and_delta_validated_train_commands = \
@@ -329,8 +330,7 @@ def commands_spotting_challenge(
         labels_dir: str = LABELS_DIR,
         splits_dir: str = SPLITS_DIR,
         base_config_dir: str = BASE_CONFIG_DIR,
-        memory_setup: str = MEMORY_SETUP
-) -> List[Command]:
+        memory_setup: str = MEMORY_SETUP) -> List[Command]:
     dataset_type = DATASET_TYPE_SOCCERNET_V2_CHALLENGE
     protocol_name = SPOTTING_CHALLENGE
     confidence_train_command = _command_spotting_confidence_train(
@@ -348,7 +348,8 @@ def commands_spotting_challenge(
             results_dir, models_dir, labels_dir, splits_dir, base_config_dir)
     return [
         confidence_train_command, delta_train_command,
-        *confidence_and_delta_test_commands]
+        *confidence_and_delta_test_commands
+    ]
 
 
 def commands_spotting_test_fusion(
@@ -359,8 +360,7 @@ def commands_spotting_test_fusion(
         features_dir: str = FEATURES_DIR,
         labels_dir: str = LABELS_DIR,
         splits_dir: str = SPLITS_DIR,
-        base_config_dir: str = BASE_CONFIG_DIR
-) -> List[Command]:
+        base_config_dir: str = BASE_CONFIG_DIR) -> List[Command]:
     return _commands_spotting_fusion_train_and_test(
         [SPLIT_KEY_VALIDATION, SPLIT_KEY_TEST], DATASET_TYPE_SOCCERNET_V2,
         SPOTTING_TEST, baidu_two_features_dir, run_name, results_dir,
@@ -375,8 +375,7 @@ def commands_spotting_challenge_validated_fusion(
         features_dir: str = FEATURES_DIR,
         labels_dir: str = LABELS_DIR,
         splits_dir: str = SPLITS_DIR,
-        base_config_dir: str = BASE_CONFIG_DIR
-) -> List[Command]:
+        base_config_dir: str = BASE_CONFIG_DIR) -> List[Command]:
     return _commands_spotting_fusion_train_and_test(
         [SPLIT_KEY_VALIDATION, SPLIT_KEY_UNLABELED],
         DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION,
@@ -393,8 +392,7 @@ def commands_spotting_challenge_fusion(
         features_dir: str = FEATURES_DIR,
         labels_dir: str = LABELS_DIR,
         splits_dir: str = SPLITS_DIR,
-        base_config_dir: str = BASE_CONFIG_DIR
-) -> List[Command]:
+        base_config_dir: str = BASE_CONFIG_DIR) -> List[Command]:
     protocol_name = SPOTTING_CHALLENGE
     dataset_type = DATASET_TYPE_SOCCERNET_V2_CHALLENGE
     split_key = SPLIT_KEY_UNLABELED
@@ -414,9 +412,9 @@ def commands_spotting_challenge_fusion(
             CONCATENATION_FEATURE_NAMES_BAIDU_RESNET, run_name, models_dir)
     test_commands = _commands_spotting_confidence_averaging_and_delta_test(
         split_key, concatenated_confidence_features_dir,
-        confidence_averaging_model_file, dataset_type, protocol_name,
-        run_name, results_dir, models_dir, labels_dir, splits_dir,
-        base_config_dir, baidu_two_features_dir)
+        confidence_averaging_model_file, dataset_type, protocol_name, run_name,
+        results_dir, models_dir, labels_dir, splits_dir, base_config_dir,
+        baidu_two_features_dir)
     return [features_from_confidences_command, *test_commands]
 
 
@@ -450,7 +448,8 @@ def _commands_confidence_and_delta_validated_train(
         splits_dir, base_config_dir, memory_setup)
     return [
         confidence_train_command, confidence_test_validation_command,
-        delta_train_command]
+        delta_train_command
+    ]
 
 
 def _commands_spotting_confidence_and_delta_test(
@@ -463,13 +462,13 @@ def _commands_spotting_confidence_and_delta_test(
             CONFIDENCE, feature_name, split_key, nms_type, dataset_type,
             protocol_name, run_name, results_dir)
     confidence_test_command = _command_spotting_confidence_test(
-        confidence_and_delta_results_dir, specific_features_dir,
-        feature_name, split_key, dataset_type, protocol_name, run_name,
-        models_dir, labels_dir, splits_dir, base_config_dir)
+        confidence_and_delta_results_dir, specific_features_dir, feature_name,
+        split_key, dataset_type, protocol_name, run_name, models_dir,
+        labels_dir, splits_dir, base_config_dir)
     delta_test_commands = _commands_spotting_delta_test(
-        confidence_and_delta_results_dir, specific_features_dir,
-        feature_name, split_key, nms_type, dataset_type, protocol_name,
-        run_name, models_dir, labels_dir, splits_dir, base_config_dir)
+        confidence_and_delta_results_dir, specific_features_dir, feature_name,
+        split_key, nms_type, dataset_type, protocol_name, run_name, models_dir,
+        labels_dir, splits_dir, base_config_dir)
     return [confidence_test_command] + delta_test_commands
 
 
@@ -506,12 +505,11 @@ def _commands_spotting_fusion_train_and_test(
                 split_key, concatenated_confidence_features_dir,
                 confidence_averaging_model_file, dataset_type, protocol_name,
                 run_name, results_dir, models_dir, labels_dir, splits_dir,
-                base_config_dir, baidu_two_features_dir
-            )
-        )
+                base_config_dir, baidu_two_features_dir))
     return [
-        *features_from_confidences_commands,
-        confidence_averaging_train_command, *test_commands]
+        *features_from_confidences_commands, confidence_averaging_train_command,
+        *test_commands
+    ]
 
 
 def _commands_spotting_confidence_averaging_and_delta_test(
@@ -544,24 +542,23 @@ def _commands_spotting_confidence_averaging_and_delta_test(
     return [confidence_averaging_test_command, *delta_test_commands]
 
 
-def _command_spotting_confidence_train(
-        specific_features_dir: str, feature_name: str, dataset_type: str,
-        protocol_name: str, run_name: str, models_dir: str, labels_dir: str,
-        splits_dir: str, base_config_dir: str, memory_setup: str) -> Command:
+def _command_spotting_confidence_train(specific_features_dir: str,
+                                       feature_name: str, dataset_type: str,
+                                       protocol_name: str, run_name: str,
+                                       models_dir: str, labels_dir: str,
+                                       splits_dir: str, base_config_dir: str,
+                                       memory_setup: str) -> Command:
     confidence_train_hyperparameters = TRAIN_HYPERPARAMETERS[dataset_type][
         feature_name][CONFIDENCE]
     confidence_model_dir = os.path.join(
         models_dir,
-        create_name(
-            confidence_train_hyperparameters, run_name, CONFIDENCE,
-            feature_name, protocol_name)
-    )
+        create_name(confidence_train_hyperparameters, run_name, CONFIDENCE,
+                    feature_name, protocol_name))
     config_dir = _confidence_config_dir(base_config_dir, dataset_type)
     return Command(
         f"Train the confidence model on the {dataset_type} dataset ("
         f"{protocol_name} protocol) on the {feature_name} features",
-        SCRIPT_TRAIN,
-        {
+        SCRIPT_TRAIN, {
             "-sd": splits_dir,
             "-ld": labels_dir,
             "-fd": specific_features_dir,
@@ -570,46 +567,40 @@ def _command_spotting_confidence_train(
             "-cd": config_dir,
             **MEMORY_TRAIN_PARAMETERS[memory_setup][feature_name],
             **detector_args(DETECTOR_DENSE),
-            **confidence_train_hyperparameters,
-            "-m": confidence_model_dir
+            **confidence_train_hyperparameters, "-m": confidence_model_dir
         },
-        env_vars=MEMORY_TRAIN_ENVIRONMENT_VARIABLES[memory_setup][feature_name]
-    )
+        env_vars=MEMORY_TRAIN_ENVIRONMENT_VARIABLES[memory_setup][feature_name])
 
 
-def _command_spotting_confidence_test(
-        specific_results_dir: str, specific_features_dir: str,
-        feature_name: str, split_key: str, dataset_type: str,
-        protocol_name: str, run_name: str, models_dir: str, labels_dir: str,
-        splits_dir: str, base_config_dir: str) -> Command:
+def _command_spotting_confidence_test(specific_results_dir: str,
+                                      specific_features_dir: str,
+                                      feature_name: str, split_key: str,
+                                      dataset_type: str, protocol_name: str,
+                                      run_name: str, models_dir: str,
+                                      labels_dir: str, splits_dir: str,
+                                      base_config_dir: str) -> Command:
     confidence_train_hyperparameters = TRAIN_HYPERPARAMETERS[dataset_type][
         feature_name][CONFIDENCE]
     confidence_model_dir = os.path.join(
         models_dir,
-        create_name(
-            confidence_train_hyperparameters, run_name, CONFIDENCE,
-            feature_name, protocol_name)
-    )
+        create_name(confidence_train_hyperparameters, run_name, CONFIDENCE,
+                    feature_name, protocol_name))
     config_dir = _confidence_config_dir(base_config_dir, dataset_type)
     model_last_or_best = _model_last_or_best(dataset_type)
     return Command(
         f"Test the confidence model on the {split_key} split of "
         f"the {dataset_type} dataset ({protocol_name} protocol) on the"
-        f" {feature_name} features",
-        SCRIPT_TEST,
-        {
+        f" {feature_name} features", SCRIPT_TEST, {
             "-sd": splits_dir,
             "-ld": labels_dir,
             "-fd": specific_features_dir,
             "-fn": feature_name,
             "-dt": dataset_type,
             "-cd": config_dir,
-            **detector_args(DETECTOR_DENSE),
-            "-ts": split_key,
+            **detector_args(DETECTOR_DENSE), "-ts": split_key,
             "-m": os.path.join(confidence_model_dir, model_last_or_best),
             "-rd": specific_results_dir
-        }
-    )
+        })
 
 
 def _command_spotting_delta_train(
@@ -619,10 +610,11 @@ def _command_spotting_delta_train(
         splits_dir: str, base_config_dir: str, memory_setup: str) -> Command:
     delta_train_hyperparameters = TRAIN_HYPERPARAMETERS[dataset_type][
         feature_name][DELTA]
-    delta_model_dir = _spotting_delta_model_dir(
-        feature_name, dataset_type, protocol_name, run_name, models_dir)
-    config_dir = _delta_config_dir(
-        base_config_dir, dataset_type, NMS_TYPE_TUNED)
+    delta_model_dir = _spotting_delta_model_dir(feature_name, dataset_type,
+                                                protocol_name, run_name,
+                                                models_dir)
+    config_dir = _delta_config_dir(base_config_dir, dataset_type,
+                                   NMS_TYPE_TUNED)
     command_arguments = {
         "-sd": splits_dir,
         "-ld": labels_dir,
@@ -642,40 +634,38 @@ def _command_spotting_delta_train(
         f"({protocol_name} protocol) using {feature_name} features",
         SCRIPT_TRAIN,
         command_arguments,
-        env_vars=MEMORY_TRAIN_ENVIRONMENT_VARIABLES[memory_setup][feature_name]
-    )
+        env_vars=MEMORY_TRAIN_ENVIRONMENT_VARIABLES[memory_setup][feature_name])
 
 
-def _commands_spotting_delta_test(
-        specific_results_dir: str, specific_features_dir: str,
-        feature_name: str, split_key: str, nms_type: str, dataset_type: str,
-        protocol_name: str, run_name: str, models_dir: str, labels_dir: str,
-        splits_dir: str, base_config_dir: str) -> List[Command]:
-    delta_model_dir = _spotting_delta_model_dir(
-        feature_name, dataset_type, protocol_name, run_name, models_dir)
+def _commands_spotting_delta_test(specific_results_dir: str,
+                                  specific_features_dir: str, feature_name: str,
+                                  split_key: str, nms_type: str,
+                                  dataset_type: str, protocol_name: str,
+                                  run_name: str, models_dir: str,
+                                  labels_dir: str, splits_dir: str,
+                                  base_config_dir: str) -> List[Command]:
+    delta_model_dir = _spotting_delta_model_dir(feature_name, dataset_type,
+                                                protocol_name, run_name,
+                                                models_dir)
     model_last_or_best = _model_last_or_best(dataset_type)
     config_dir = _delta_config_dir(base_config_dir, dataset_type, nms_type)
     delta_test_command = Command(
         f"Test the displacement (delta) model on the {split_key} split of the "
         f"{dataset_type} dataset ({protocol_name} protocol) using"
         f" {feature_name} features and post-processing with {nms_type}",
-        SCRIPT_TEST,
-        {
+        SCRIPT_TEST, {
             "-sd": splits_dir,
             "-ld": labels_dir,
             "-fd": specific_features_dir,
             "-fn": feature_name,
             "-dt": dataset_type,
             "-cd": config_dir,
-            **detector_args(DETECTOR_DENSE_DELTA),
-            "-tod": "0",
+            **detector_args(DETECTOR_DENSE_DELTA), "-tod": "0",
             **DELTA_TEST_PARAMETERS_PER_SPLIT[split_key],
-            **DELTA_TEST_PARAMETERS_PER_NMS_TYPE[nms_type],
-            "-ts": split_key,
+            **DELTA_TEST_PARAMETERS_PER_NMS_TYPE[nms_type], "-ts": split_key,
             "-m": os.path.join(delta_model_dir, model_last_or_best),
             "-rd": specific_results_dir
-        }
-    )
+        })
     commands = [delta_test_command]
     if split_key == SPLIT_KEY_UNLABELED:
         zip_results_command = _command_zip_results(specific_results_dir)
@@ -685,23 +675,27 @@ def _commands_spotting_delta_test(
 
 def _command_zip_results(experiment_results_dir: str) -> Command:
     return Command(
-        "Zip the spotting result JSONs into a single zip file", EXECUTABLE_ZIP,
+        "Zip the spotting result JSONs into a single zip file",
+        EXECUTABLE_ZIP,
         ["-r", "results_spotting.zip", ".", "-i", f"*/*/*/{RESULTS_JSON}"],
-        cwd=experiment_results_dir
-    )
+        cwd=experiment_results_dir)
 
 
-def _command_features_from_confidence_results(
-        split_key: str, feature_names: List[str], dataset_type: str,
-        protocol_name: str, run_name: str, results_dir: str,
-        features_dir: str) -> Command:
+def _command_features_from_confidence_results(split_key: str,
+                                              feature_names: List[str],
+                                              dataset_type: str,
+                                              protocol_name: str, run_name: str,
+                                              results_dir: str,
+                                              features_dir: str) -> Command:
     concatenated_confidence_features_dir = \
         _concatenated_confidence_features_dir(
             protocol_name, feature_names, features_dir)
     results_dirs = [
-        _spotting_confidence_and_delta_results_dir(
-            CONFIDENCE, feature_name, split_key, NMS_TYPE_SOFT_TUNED,
-            dataset_type, protocol_name, run_name, results_dir)
+        _spotting_confidence_and_delta_results_dir(CONFIDENCE, feature_name,
+                                                   split_key,
+                                                   NMS_TYPE_SOFT_TUNED,
+                                                   dataset_type, protocol_name,
+                                                   run_name, results_dir)
         for feature_name in feature_names
     ]
     results_dirs_str = " ".join(results_dirs)
@@ -710,14 +704,14 @@ def _command_features_from_confidence_results(
         f"models trained on features {feature_names} on the {split_key} split "
         f"of the {dataset_type} dataset ({protocol_name} protocol) and "
         f"concatenate them into a single feature file",
-        SCRIPT_CREATE_FEATURES_FROM_RESULTS,
-        {
-            f"--{FromResultsArgs.INPUT_DIRS}": results_dirs_str,
+        SCRIPT_CREATE_FEATURES_FROM_RESULTS, {
+            f"--{FromResultsArgs.INPUT_DIRS}":
+                results_dirs_str,
             f"--{FromResultsArgs.OUTPUT_DIR}":
                 concatenated_confidence_features_dir,
-            f"--{FromResultsArgs.OUTPUT_NAME}": CONFIDENCE
-        }
-    )
+            f"--{FromResultsArgs.OUTPUT_NAME}":
+                CONFIDENCE
+        })
 
 
 def _command_spotting_confidence_averaging_train(
@@ -727,18 +721,22 @@ def _command_spotting_confidence_averaging_train(
     config_dir = _confidence_config_dir(base_config_dir, dataset_type)
     return Command(
         "Train a model that averages the confidence probabilities given in the "
-        "input features files", SCRIPT_CREATE_AVERAGING_PREDICTOR,
-        {
-            "-sd": splits_dir,
-            "-ld": labels_dir,
-            "-fd": concatenated_confidence_features_dir,
-            "-fn": CONFIDENCE,
-            "-dt": dataset_type,
-            "-cd": config_dir,
-            **detector_args(DETECTOR_AVERAGING_CONFIDENCE),
-            "-m": confidence_averaging_model_file
-        }
-    )
+        "input features files", SCRIPT_CREATE_AVERAGING_PREDICTOR, {
+            "-sd":
+                splits_dir,
+            "-ld":
+                labels_dir,
+            "-fd":
+                concatenated_confidence_features_dir,
+            "-fn":
+                CONFIDENCE,
+            "-dt":
+                dataset_type,
+            "-cd":
+                config_dir,
+            **detector_args(DETECTOR_AVERAGING_CONFIDENCE), "-m":
+                confidence_averaging_model_file
+        })
 
 
 def _command_spotting_confidence_averaging_test(
@@ -750,8 +748,7 @@ def _command_spotting_confidence_averaging_test(
     return Command(
         f"Fuse the confidence scores using the averaging predictor over the "
         f"{split_key} split of the {dataset_type} dataset ({protocol_name} "
-        f"protocol)", SCRIPT_TEST,
-        {
+        f"protocol)", SCRIPT_TEST, {
             "-sd": splits_dir,
             "-ld": labels_dir,
             "-fd": concatenated_confidence_features_dir,
@@ -762,16 +759,15 @@ def _command_spotting_confidence_averaging_test(
             "-ts": split_key,
             "-m": confidence_averaging_model_file,
             "-rd": specific_results_dir,
-        }
-    )
+        })
 
 
-def _concatenated_confidence_features_dir(
-        protocol_name: str, feature_names: List[str], features_dir: str) -> str:
+def _concatenated_confidence_features_dir(protocol_name: str,
+                                          feature_names: List[str],
+                                          features_dir: str) -> str:
     feature_names_str = "_".join(feature_names)
     return os.path.join(
-        features_dir,
-        f"{protocol_name}_{CONCATENATED_CONFIDENCE_FEATURES_DIR}_"
+        features_dir, f"{protocol_name}_{CONCATENATED_CONFIDENCE_FEATURES_DIR}_"
         f"{feature_names_str}")
 
 
@@ -785,57 +781,55 @@ def _spotting_challenge_validated_confidence_averaging_model_file(
     return os.path.join(models_dir, averaging_model_file_name)
 
 
-def _spotting_confidence_results_dir(
-        feature_name: str, split_key: str, dataset_type: str,
-        protocol_name: str, run_name: str, results_dir: str) -> str:
-    confidence_train_hyperparameters = TRAIN_HYPERPARAMETERS[
-        dataset_type][feature_name][CONFIDENCE]
+def _spotting_confidence_results_dir(feature_name: str, split_key: str,
+                                     dataset_type: str, protocol_name: str,
+                                     run_name: str, results_dir: str) -> str:
+    confidence_train_hyperparameters = TRAIN_HYPERPARAMETERS[dataset_type][
+        feature_name][CONFIDENCE]
     extra_name = f"{split_key}_{run_name}"
     return os.path.join(
         results_dir,
-        create_name(
-            confidence_train_hyperparameters, extra_name, CONFIDENCE,
-            feature_name, protocol_name)
-    )
+        create_name(confidence_train_hyperparameters, extra_name, CONFIDENCE,
+                    feature_name, protocol_name))
 
 
-def _spotting_confidence_and_delta_results_dir(
-        confidence_name: str, feature_name: str, split_key: str, nms_type: str,
-        dataset_type: str, protocol_name: str, run_name: str,
-        results_dir: str) -> str:
+def _spotting_confidence_and_delta_results_dir(confidence_name: str,
+                                               feature_name: str,
+                                               split_key: str, nms_type: str,
+                                               dataset_type: str,
+                                               protocol_name: str,
+                                               run_name: str,
+                                               results_dir: str) -> str:
     delta_train_hyperparameters = TRAIN_HYPERPARAMETERS[dataset_type][
         feature_name][DELTA]
     delta_test_split_parameters = DELTA_TEST_PARAMETERS_PER_SPLIT[split_key]
     delta_all_parameters = {
         **delta_train_hyperparameters,
-        **delta_test_split_parameters}
+        **delta_test_split_parameters
+    }
     extra_name = f"{confidence_name}_{split_key}_{nms_type}_{run_name}"
     return os.path.join(
         results_dir,
-        create_name(
-            delta_all_parameters, extra_name, DELTA, feature_name,
-            protocol_name)
-    )
+        create_name(delta_all_parameters, extra_name, DELTA, feature_name,
+                    protocol_name))
 
 
-def _spotting_delta_model_dir(
-        feature_name: str, dataset_type: str, protocol_name: str, run_name: str,
-        models_dir: str) -> str:
+def _spotting_delta_model_dir(feature_name: str, dataset_type: str,
+                              protocol_name: str, run_name: str,
+                              models_dir: str) -> str:
     delta_train_hyperparameters = TRAIN_HYPERPARAMETERS[dataset_type][
         feature_name][DELTA]
     return os.path.join(
         models_dir,
-        create_name(
-            delta_train_hyperparameters, run_name, DELTA, feature_name,
-            protocol_name)
-    )
+        create_name(delta_train_hyperparameters, run_name, DELTA, feature_name,
+                    protocol_name))
 
 
-def _delta_config_dir(
-        base_config_dir: str, dataset_type: str, nms_type: str) -> str:
+def _delta_config_dir(base_config_dir: str, dataset_type: str,
+                      nms_type: str) -> str:
     if dataset_type in {
-        DATASET_TYPE_SOCCERNET_V2_CHALLENGE,
-        DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION
+            DATASET_TYPE_SOCCERNET_V2_CHALLENGE,
+            DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION
     }:
         if nms_type == NMS_TYPE_TUNED:
             dir_name = CONFIG_DIR_CHALLENGE_DELTA
@@ -867,8 +861,8 @@ def _delta_config_dir(
 
 def _confidence_config_dir(base_config_dir: str, dataset_type: str) -> str:
     if dataset_type in {
-        DATASET_TYPE_SOCCERNET_V2_CHALLENGE,
-        DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION
+            DATASET_TYPE_SOCCERNET_V2_CHALLENGE,
+            DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION
     }:
         dir_name = CONFIG_DIR_CHALLENGE_CONFIDENCE
     elif dataset_type == DATASET_TYPE_SOCCERNET_V2:

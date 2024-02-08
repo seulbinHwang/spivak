@@ -32,34 +32,37 @@ SOURCE_FLOAT_PREDICTION = 1.0
 SOURCE_FLOAT_LABEL = 3.0
 
 
-def add_segmentation_graph(
-        html_file: TextIO, data_frame: DataFrame,
-        category_settings: CategorySettings) -> None:
-    fig = _plot_segmentation_and_labels(
-        data_frame, category_settings, SEGMENTATION_HEIGHT)
-    fig.update_layout(
-        title_text=SEGMENTATION_TITLE, legend=dict(itemsizing="constant"))
-    time_range = [data_frame[COLUMN_TIME].head(1).item(),
-                  data_frame[COLUMN_TIME].tail(1).item()]
+def add_segmentation_graph(html_file: TextIO, data_frame: DataFrame,
+                           category_settings: CategorySettings) -> None:
+    fig = _plot_segmentation_and_labels(data_frame, category_settings,
+                                        SEGMENTATION_HEIGHT)
+    fig.update_layout(title_text=SEGMENTATION_TITLE,
+                      legend=dict(itemsizing="constant"))
+    time_range = [
+        data_frame[COLUMN_TIME].head(1).item(),
+        data_frame[COLUMN_TIME].tail(1).item()
+    ]
     fig.update_xaxes(tickformat='%M:%S.%L', range=time_range)
     y_tick_values = [SOURCE_FLOAT_PREDICTION, SOURCE_FLOAT_LABEL]
     y_range = [min(y_tick_values) - 3.0, max(y_tick_values) + 3.0]
     y_tick_texts = [
-        SEGMENTATION_PREDICTION_TICK_LABEL, COLUMN_SEGMENTATION_LABEL]
-    fig.update_yaxes(
-        range=y_range, tickvals=y_tick_values, ticktext=y_tick_texts,
-        title_text=COLUMN_SOURCE)
+        SEGMENTATION_PREDICTION_TICK_LABEL, COLUMN_SEGMENTATION_LABEL
+    ]
+    fig.update_yaxes(range=y_range,
+                     tickvals=y_tick_values,
+                     ticktext=y_tick_texts,
+                     title_text=COLUMN_SOURCE)
     fig.write_html(html_file)
 
 
-def add_segmentation_scores_graphs(
-        html_file: TextIO, data_frame: DataFrame,
-        category_settings: CategorySettings) -> None:
+def add_segmentation_scores_graphs(html_file: TextIO, data_frame: DataFrame,
+                                   category_settings: CategorySettings) -> None:
     n_categories = len(category_settings.discrete_color_map)
     predictions_data_frame = _max_prediction_per_time_instant(data_frame)
-    fig = make_subplots(
-        rows=n_categories, cols=1, shared_xaxes=True,
-        vertical_spacing=SUBPLOT_VERTICAL_SPACING)
+    fig = make_subplots(rows=n_categories,
+                        cols=1,
+                        shared_xaxes=True,
+                        vertical_spacing=SUBPLOT_VERTICAL_SPACING)
     for category_index, category in enumerate(
             category_settings.category_order[COLUMN_CLASS]):
         row = category_index + 1
@@ -67,25 +70,25 @@ def add_segmentation_scores_graphs(
         category_data_frame = data_frame[data_frame[COLUMN_CLASS] == category]
         category_predictions_data_frame = predictions_data_frame[
             predictions_data_frame[COLUMN_CLASS] == category]
-        _fig_add_segmentation_scores(
-            fig, category_data_frame, category, category_color, row)
-        _fig_add_predictions(
-            fig, category_predictions_data_frame, category + PREDICTION_SUFFIX,
-            category_color, row)
-        _fig_add_labels(
-            fig, category_data_frame, category + LABEL_SUFFIX, "black", row)
-    fig.update_yaxes(
-        range=SCORES_RANGE_EXTRA, showticklabels=False, visible=True)
+        _fig_add_segmentation_scores(fig, category_data_frame, category,
+                                     category_color, row)
+        _fig_add_predictions(fig, category_predictions_data_frame,
+                             category + PREDICTION_SUFFIX, category_color, row)
+        _fig_add_labels(fig, category_data_frame, category + LABEL_SUFFIX,
+                        "black", row)
+    fig.update_yaxes(range=SCORES_RANGE_EXTRA,
+                     showticklabels=False,
+                     visible=True)
     adjust_subplot_xaxes(fig, n_categories)
-    fig.update_layout(
-        title_text=SEGMENTATION_SCORES_TITLE, height=SEGMENTATION_SCORES_HEIGHT,
-        legend=dict(itemsizing="constant"))
+    fig.update_layout(title_text=SEGMENTATION_SCORES_TITLE,
+                      height=SEGMENTATION_SCORES_HEIGHT,
+                      legend=dict(itemsizing="constant"))
     fig.write_html(html_file)
 
 
-def _plot_segmentation_and_labels(
-        data_frame: DataFrame, category_settings: CategorySettings,
-        height: int) -> Figure:
+def _plot_segmentation_and_labels(data_frame: DataFrame,
+                                  category_settings: CategorySettings,
+                                  height: int) -> Figure:
     # Get predictions from data frame
     predictions_data_frame = _max_prediction_per_time_instant(data_frame)
     predictions_data_frame[COLUMN_SOURCE_FLOAT] = SOURCE_FLOAT_PREDICTION
@@ -96,60 +99,78 @@ def _plot_segmentation_and_labels(
     # Concatenate the segmentation predictions with the labels, then plot.
     predictions_and_labels_data_frame = pandas.concat(
         [predictions_data_frame, labels_data_frame])
-    fig = px.scatter(
-        predictions_and_labels_data_frame, x=COLUMN_TIME,
-        y=COLUMN_SOURCE_FLOAT, color=COLUMN_CLASS, height=height,
-        category_orders=category_settings.category_order,
-        color_discrete_map=category_settings.discrete_color_map)
-    fig.update_traces(
-        marker=dict(symbol="line-ns-open", size=35, line=dict(width=1)),
-        selector=dict(mode="markers"))
+    fig = px.scatter(predictions_and_labels_data_frame,
+                     x=COLUMN_TIME,
+                     y=COLUMN_SOURCE_FLOAT,
+                     color=COLUMN_CLASS,
+                     height=height,
+                     category_orders=category_settings.category_order,
+                     color_discrete_map=category_settings.discrete_color_map)
+    fig.update_traces(marker=dict(symbol="line-ns-open",
+                                  size=35,
+                                  line=dict(width=1)),
+                      selector=dict(mode="markers"))
     return fig
 
 
 def _max_prediction_per_time_instant(data_frame: DataFrame) -> DataFrame:
-    max_score_per_frame_idx = (
-        data_frame.groupby([COLUMN_TIME])[COLUMN_SEGMENTATION_SCORE].idxmax())
+    max_score_per_frame_idx = (data_frame.groupby(
+        [COLUMN_TIME])[COLUMN_SEGMENTATION_SCORE].idxmax())
     return data_frame.loc[max_score_per_frame_idx]
 
 
-def _fig_add_segmentation_scores(
-        fig: Figure, category_data_frame: DataFrame, category: str,
-        category_color: str, row: int) -> None:
+def _fig_add_segmentation_scores(fig: Figure, category_data_frame: DataFrame,
+                                 category: str, category_color: str,
+                                 row: int) -> None:
     line_dict = dict(color=category_color)
-    fig.add_scatter(
-        x=category_data_frame[COLUMN_TIME],
-        y=category_data_frame[COLUMN_SEGMENTATION_SCORE], name=category,
-        line=line_dict, col=1, row=row)
+    fig.add_scatter(x=category_data_frame[COLUMN_TIME],
+                    y=category_data_frame[COLUMN_SEGMENTATION_SCORE],
+                    name=category,
+                    line=line_dict,
+                    col=1,
+                    row=row)
 
 
-def _fig_add_labels(
-        fig: Figure, category_data_frame: DataFrame, name: str, color: str,
-        row: int) -> None:
-    x, y = extract_locations(
-        category_data_frame, COLUMN_SEGMENTATION_LABEL, Y_LABELS)
+def _fig_add_labels(fig: Figure, category_data_frame: DataFrame, name: str,
+                    color: str, row: int) -> None:
+    x, y = extract_locations(category_data_frame, COLUMN_SEGMENTATION_LABEL,
+                             Y_LABELS)
     label_marker = _create_label_marker(color)
-    fig.add_scatter(
-        x=x, y=y, col=1, row=row, name=name, mode="markers",
-        marker=label_marker)
+    fig.add_scatter(x=x,
+                    y=y,
+                    col=1,
+                    row=row,
+                    name=name,
+                    mode="markers",
+                    marker=label_marker)
 
 
-def _fig_add_predictions(
-        fig: Figure, category_predictions_data_frame: DataFrame, name: str,
-        color: str, row: int) -> None:
+def _fig_add_predictions(fig: Figure,
+                         category_predictions_data_frame: DataFrame, name: str,
+                         color: str, row: int) -> None:
     x = category_predictions_data_frame[COLUMN_TIME]
     y = Y_PREDICTIONS * np.ones(len(x))
     prediction_marker = _create_prediction_marker(color)
-    fig.add_scatter(
-        x=x, y=y, col=1, row=row, name=name, mode="markers",
-        marker=prediction_marker)
+    fig.add_scatter(x=x,
+                    y=y,
+                    col=1,
+                    row=row,
+                    name=name,
+                    mode="markers",
+                    marker=prediction_marker)
 
 
 def _create_label_marker(color: str) -> Dict:
-    return dict(
-        size=2, color=color, line_color=color, symbol="circle", line_width=0)
+    return dict(size=2,
+                color=color,
+                line_color=color,
+                symbol="circle",
+                line_width=0)
 
 
 def _create_prediction_marker(color: str) -> Dict:
-    return dict(
-        size=2, color=color, line_color=color, symbol="circle", line_width=0)
+    return dict(size=2,
+                color=color,
+                line_color=color,
+                symbol="circle",
+                line_width=0)

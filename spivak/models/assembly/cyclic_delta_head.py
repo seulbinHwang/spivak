@@ -19,11 +19,10 @@ COSINE_EPSILON = 0.01
 
 class CyclicDeltaPredictorHead(DeltaPredictorHeadInterface):
 
-    def __init__(
-            self, name: str, radius: float, delta_loss: "CyclicDeltaLoss",
-            num_chunk_frames: int, num_classes: int, weight_decay: float,
-            batch_norm: bool, dropout_rate: float, width: int,
-            num_head_layers: int, zero_init: bool) -> None:
+    def __init__(self, name: str, radius: float, delta_loss: "CyclicDeltaLoss",
+                 num_chunk_frames: int, num_classes: int, weight_decay: float,
+                 batch_norm: bool, dropout_rate: float, width: int,
+                 num_head_layers: int, zero_init: bool) -> None:
         self._name = name
         self._delta_loss = delta_loss
         self._radius = radius
@@ -41,10 +40,12 @@ class CyclicDeltaPredictorHead(DeltaPredictorHeadInterface):
             self._name, self._weight_decay, self._batch_norm,
             self._dropout_rate, self._width, self._num_head_layers,
             nodes[NODE_PENULTIMATE])
-        return create_cyclic_delta_tensor(
-            self._name, self._num_chunk_frames, self._num_classes, 1,
-            self._weight_decay, self._batch_norm, self._dropout_rate,
-            delta_tensor_window_size, self._zero_init, delta_tensor_input)
+        return create_cyclic_delta_tensor(self._name, self._num_chunk_frames,
+                                          self._num_classes, 1,
+                                          self._weight_decay, self._batch_norm,
+                                          self._dropout_rate,
+                                          delta_tensor_window_size,
+                                          self._zero_init, delta_tensor_input)
 
     def post_process(self, delta_sin_cos):
         return post_process_cyclic_delta(delta_sin_cos, self._radius)
@@ -91,18 +92,18 @@ class CyclicDeltaLoss:
         def cyclic_delta_loss(targets_and_weights, predictions):
             targets = targets_and_weights[:, :, :, 0:1]
             weights = targets_and_weights[:, :, :, 1]
-            return create_cyclic_delta_loss(
-                targets, predictions, weights, base_loss)
+            return create_cyclic_delta_loss(targets, predictions, weights,
+                                            base_loss)
 
         self.weight = weight
         self.loss = cyclic_delta_loss
         self.name = "cyclic_delta_loss"
 
 
-def create_cyclic_delta_tensor(
-        name, num_chunk_frames, num_classes, num_radii, weight_decay,
-        batch_norm, dropout_rate, window_size, zero_init: bool,
-        penultimate: Tensor) -> Tensor:
+def create_cyclic_delta_tensor(name, num_chunk_frames, num_classes, num_radii,
+                               weight_decay, batch_norm, dropout_rate,
+                               window_size, zero_init: bool,
+                               penultimate: Tensor) -> Tensor:
     if zero_init:
         kernel_initializer = tf.keras.initializers.Zeros()
         cosine_bias_initializer = tf.keras.initializers.Constant(1.0)
@@ -111,14 +112,26 @@ def create_cyclic_delta_tensor(
         cosine_bias_initializer = None
     convolution_name = f"{name}_{NODE_SUFFIX_CONVOLUTION}"
     deltas_sine_convolution = convolution_wrapper(
-        penultimate, num_classes * num_radii, (window_size, 1), (1, 1),
-        "same", weight_decay, batch_norm, dropout_rate, kernel_initializer,
-        name=f"{convolution_name}_sine", activation="tanh")
+        penultimate,
+        num_classes * num_radii, (window_size, 1), (1, 1),
+        "same",
+        weight_decay,
+        batch_norm,
+        dropout_rate,
+        kernel_initializer,
+        name=f"{convolution_name}_sine",
+        activation="tanh")
     deltas_cosine_convolution = convolution_wrapper(
-        penultimate, num_classes * num_radii, (window_size, 1), (1, 1),
-        "same", weight_decay, batch_norm, dropout_rate, kernel_initializer,
+        penultimate,
+        num_classes * num_radii, (window_size, 1), (1, 1),
+        "same",
+        weight_decay,
+        batch_norm,
+        dropout_rate,
+        kernel_initializer,
         bias_initializer=cosine_bias_initializer,
-        name=f"{convolution_name}_cosine", activation="tanh")
+        name=f"{convolution_name}_cosine",
+        activation="tanh")
     # stack does not take in a name argument.
     deltas_convolution = K.stack(
         [deltas_sine_convolution, deltas_cosine_convolution], axis=4)
@@ -137,18 +150,17 @@ def post_process_cyclic_delta(delta_sin_cos, radius):
 
 
 def create_cyclic_delta_loss(targets, predictions, weights, base_loss):
-    return (
-        _create_cyclic_delta_diff_loss(targets, predictions, weights, base_loss)
-        + 0.01 * _unit_norm_loss(predictions, weights)
-    )
+    return (_create_cyclic_delta_diff_loss(targets, predictions, weights,
+                                           base_loss) +
+            0.01 * _unit_norm_loss(predictions, weights))
 
 
 def _unit_norm_loss(y_pred, weights):
     return K.mean(weights * tf.abs(1.0 - tf.norm(y_pred, axis=3)), axis=(1, 2))
 
 
-def _create_cyclic_delta_diff_loss(
-        targets, sin_cos_predictions, weights, base_loss):
+def _create_cyclic_delta_diff_loss(targets, sin_cos_predictions, weights,
+                                   base_loss):
     clipped_targets = tf.clip_by_value(targets, -1.0, 1.0)
     targets_angle = np.pi * clipped_targets
     targets_sin = tf.sin(targets_angle)

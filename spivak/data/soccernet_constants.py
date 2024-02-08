@@ -19,8 +19,11 @@ LABEL_FILE_NAME_V2_CAMERAS = "Labels-cameras.json"
 
 # Events as annotated in SoccerNet-v1.
 EVENT_DICTIONARY_V1 = {
-    "soccer-ball": 0, "soccer-ball-own": 0,
-    "r-card": 1, "y-card": 1, "yr-card": 1,
+    "soccer-ball": 0,
+    "soccer-ball-own": 0,
+    "r-card": 1,
+    "y-card": 1,
+    "yr-card": 1,
     "substitution-in": 2
 }
 

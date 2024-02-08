@@ -25,9 +25,8 @@ class FlexibleNonMaximumSuppression:
     NMS_COLUMN_WINDOW = "window"
     NMS_COLUMN_LABEL = "label"
 
-    def __init__(
-            self, nms_on: bool, class_windows: Optional[np.ndarray],
-            score_decay: "ScoreDecayInterface") -> None:
+    def __init__(self, nms_on: bool, class_windows: Optional[np.ndarray],
+                 score_decay: "ScoreDecayInterface") -> None:
         """class_windows are not in seconds, but in frames."""
         self._nms_on = nms_on
         self._class_windows = class_windows
@@ -36,8 +35,9 @@ class FlexibleNonMaximumSuppression:
     def maybe_apply(self, detection_scores: np.ndarray) -> np.ndarray:
         if not self._nms_on:
             return detection_scores
-        return _flexible_non_maximum_suppression(
-            detection_scores, self._class_windows, self._score_decay)
+        return _flexible_non_maximum_suppression(detection_scores,
+                                                 self._class_windows,
+                                                 self._score_decay)
 
     @staticmethod
     def read_nms_windows(windows_path: Path, label_map: LabelMap) -> np.ndarray:
@@ -120,16 +120,14 @@ def _flexible_non_maximum_suppression(
         score_decay: ScoreDecayInterface) -> np.ndarray:
     # Apply nms separately for each class.
     nms_scores_list = [
-        _single_class_nms(
-            scores[:, class_index], class_window, score_decay)
+        _single_class_nms(scores[:, class_index], class_window, score_decay)
         for class_index, class_window in enumerate(class_windows)
     ]
     return np.column_stack(nms_scores_list)
 
 
-def _single_class_nms(
-        class_scores: np.ndarray, class_window: float,
-        score_decay: ScoreDecayInterface) -> np.ndarray:
+def _single_class_nms(class_scores: np.ndarray, class_window: float,
+                      score_decay: ScoreDecayInterface) -> np.ndarray:
     class_scores_nms = np.zeros(class_scores.shape) - 1
     class_scores_tmp = np.copy(class_scores)
     max_index = int(np.argmax(class_scores_tmp))

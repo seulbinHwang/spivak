@@ -29,16 +29,15 @@ SEGMENTATION_TARGET_DIMENSION = 2
 
 class SegmentationTrainerHead(TrainerHeadInterface):
 
-    def __init__(
-            self, segmentation_predictor_head: "SegmentationPredictorHead",
-            weight_creator: WeightCreatorInterface) -> None:
+    def __init__(self, segmentation_predictor_head: "SegmentationPredictorHead",
+                 weight_creator: WeightCreatorInterface) -> None:
         self._weight_creator = weight_creator
         self._num_chunk_frames = segmentation_predictor_head.num_chunk_frames
         self._num_classes = segmentation_predictor_head.num_classes
         self._segmentation_predictor_head = segmentation_predictor_head
 
-    def video_targets(
-            self, video_labels_from_task: LabelsFromTaskDict) -> np.ndarray:
+    def video_targets(self,
+                      video_labels_from_task: LabelsFromTaskDict) -> np.ndarray:
         video_labels = video_labels_from_task[Task.SEGMENTATION][INDEX_LABELS]
         segmentation_targets = segmentation_targets_from_change_labels(
             video_labels)
@@ -46,20 +45,20 @@ class SegmentationTrainerHead(TrainerHeadInterface):
             video_labels, segmentation_targets)
         return np.stack([segmentation_targets, weight_inputs], axis=2)
 
-    def tf_chunk_targets_mapper(
-            self, video_targets_and_weight_inputs, task: Task):
+    def tf_chunk_targets_mapper(self, video_targets_and_weight_inputs,
+                                task: Task):
         valid_task = SegmentationTrainerHead._valid_task(task)
         return get_tf_targets_and_weights_mapper(
             video_targets_and_weight_inputs, self._num_chunk_frames,
             self._weight_creator, valid_task)
 
-    def chunk_targets(
-            self, video_targets_and_weight_inputs, start: int,
-            mask: np.ndarray, task: Task) -> np.ndarray:
+    def chunk_targets(self, video_targets_and_weight_inputs, start: int,
+                      mask: np.ndarray, task: Task) -> np.ndarray:
         valid_task = SegmentationTrainerHead._valid_task(task)
-        return get_chunk_targets_and_weights(
-            video_targets_and_weight_inputs, start, mask,
-            self._num_chunk_frames, self._weight_creator, valid_task)
+        return get_chunk_targets_and_weights(video_targets_and_weight_inputs,
+                                             start, mask,
+                                             self._num_chunk_frames,
+                                             self._weight_creator, valid_task)
 
     @property
     def video_targets_shape(self):
@@ -80,11 +79,10 @@ class SegmentationTrainerHead(TrainerHeadInterface):
 
 class SegmentationPredictorHead(PredictorHeadInterface):
 
-    def __init__(
-            self, name: str, num_chunk_frames: int, num_classes: int,
-            segmentation_loss: "SegmentationLoss", weight_decay: float,
-            batch_norm: bool, dropout_rate: float, width: int,
-            num_head_layers: int) -> None:
+    def __init__(self, name: str, num_chunk_frames: int, num_classes: int,
+                 segmentation_loss: "SegmentationLoss", weight_decay: float,
+                 batch_norm: bool, dropout_rate: float, width: int,
+                 num_head_layers: int) -> None:
         self._name = name
         self._num_chunk_frames = num_chunk_frames
         self._num_classes = num_classes
@@ -100,10 +98,12 @@ class SegmentationPredictorHead(PredictorHeadInterface):
             self._name, self._weight_decay, self._batch_norm,
             self._dropout_rate, self._width, self._num_head_layers,
             nodes[NODE_PENULTIMATE])
-        return _create_segmentation_tensor(
-            self._name, self._num_chunk_frames, self._num_classes,
-            self._weight_decay, self._batch_norm, self._dropout_rate,
-            last_tensor_window_size, segmentation_tensor_input)
+        return _create_segmentation_tensor(self._name, self._num_chunk_frames,
+                                           self._num_classes,
+                                           self._weight_decay, self._batch_norm,
+                                           self._dropout_rate,
+                                           last_tensor_window_size,
+                                           segmentation_tensor_input)
 
     def post_process(self, segmentations):
         # The output head predicts logits, so we need to apply the softmax
@@ -158,8 +158,8 @@ class SegmentationLoss:
             # targets_and_weights, so we just take class 0 below to get weights
             # to the right shape.
             weights = targets_and_weights[:, :, 0, 1]
-            return _create_segmentation_loss(
-                targets, predictions, weights, focusing_gamma)
+            return _create_segmentation_loss(targets, predictions, weights,
+                                             focusing_gamma)
 
         self.loss = segmentation_loss
         self.name = "segmentation_loss"
@@ -168,9 +168,8 @@ class SegmentationLoss:
 
 class SegmentationWeightCreator(WeightCreatorInterface):
 
-    def __init__(
-            self, training_set: Dataset, temperature: float,
-            base_class_weights: np.ndarray) -> None:
+    def __init__(self, training_set: Dataset, temperature: float,
+                 base_class_weights: np.ndarray) -> None:
         class_counts = _class_counts(training_set)
         class_weights_from_counts = _class_weights_from_counts(
             class_counts, temperature)
@@ -199,13 +198,13 @@ class SegmentationWeightCreator(WeightCreatorInterface):
         return chunk_weight_inputs
 
 
-def _create_segmentation_loss(
-        targets, logit_predictions, weights, focusing_gamma: float) -> Tensor:
+def _create_segmentation_loss(targets, logit_predictions, weights,
+                              focusing_gamma: float) -> Tensor:
     if focusing_gamma < 0.0:
         raise ValueError(
             "Value of gamma should be greater than or equal to zero.")
-    cce = CategoricalCrossentropy(
-        from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+    cce = CategoricalCrossentropy(from_logits=True,
+                                  reduction=tf.keras.losses.Reduction.NONE)
     cce_losses = cce(targets, logit_predictions)
     # Note that we do not use the alpha here to weigh the different classes.
     # Weighing the classes should optionally be done via the input "weights"
@@ -228,34 +227,39 @@ def _create_segmentation_loss(
     return backend.mean(weighted_losses, axis=1)
 
 
-def _create_segmentation_tensor(
-        name: str, num_frames: int, num_classes: int, weight_decay: float,
-        batch_norm, dropout_rate: float, window_size: int,
-        penultimate: Tensor) -> Tensor:
+def _create_segmentation_tensor(name: str, num_frames: int, num_classes: int,
+                                weight_decay: float, batch_norm,
+                                dropout_rate: float, window_size: int,
+                                penultimate: Tensor) -> Tensor:
     segmentation_name = f"{name}_{NODE_SUFFIX_CONVOLUTION}"
-    segmentation_convolution = convolution_wrapper(
-        penultimate, num_classes, (window_size, 1), (1, 1), "same",
-        weight_decay, batch_norm, dropout_rate, INITIALIZER_FOR_SOFTMAX,
-        name=segmentation_name)
+    segmentation_convolution = convolution_wrapper(penultimate,
+                                                   num_classes,
+                                                   (window_size, 1), (1, 1),
+                                                   "same",
+                                                   weight_decay,
+                                                   batch_norm,
+                                                   dropout_rate,
+                                                   INITIALIZER_FOR_SOFTMAX,
+                                                   name=segmentation_name)
     reshaped = Reshape(
-        (num_frames, num_classes, 1), name=f"{name}_{NODE_SUFFIX_LOGITS}")(
-        segmentation_convolution)
+        (num_frames, num_classes, 1),
+        name=f"{name}_{NODE_SUFFIX_LOGITS}")(segmentation_convolution)
     return reshaped
 
 
-def _class_weights_from_counts(
-        class_counts: np.ndarray, temperature: float) -> np.ndarray:
+def _class_weights_from_counts(class_counts: np.ndarray,
+                               temperature: float) -> np.ndarray:
     # The class weights should be inversely proportional to their frequency.
     inverse_counts = 1.0 / class_counts
     # Apply the temperature to make the class weights be more or less smooth.
     power_inverse_counts = np.power(inverse_counts, 1.0 / temperature)
     # We want the total weight to be preserved. i.e. we want
     # sum_i(class_counts[i] * class_weights[i]) == sum_i(class_counts[i])
-    inverse_power_count_total_weight = np.sum(
-        class_counts * power_inverse_counts)
+    inverse_power_count_total_weight = np.sum(class_counts *
+                                              power_inverse_counts)
     original_total_weight = class_counts.sum()
-    class_weights = power_inverse_counts * (
-            original_total_weight / inverse_power_count_total_weight)
+    class_weights = power_inverse_counts * (original_total_weight /
+                                            inverse_power_count_total_weight)
     return class_weights
 
 

@@ -67,18 +67,18 @@ class TransformerEncoderConfig:
     CONVOLUTIONAL_POSITIONAL_EMBEDDING = "convolutional"
     SINUSOIDAL_POSITIONAL_EMBEDDING = "sinusoidal"
 
-    def __init__(
-            self, embedding_size: int, num_chunk_frames: int,
-            initializer_range: float, layer_dropout: float,
-            layer_norm_eps: float, do_stable_layer_norm: bool,
-            hidden_layers: int, hidden_groups: int, hidden_size: int,
-            hidden_dropout: float, hidden_activation: str, attention_heads: int,
-            attention_dropout: float, intermediate_size: int,
-            activation_dropout: float, positional_embedding: str,
-            convolutional_positional_embedding_kernel: int,
-            convolutional_positional_embedding_groups: int,
-            convolutional_positional_embedding_activation: str,
-            name: str) -> None:
+    def __init__(self, embedding_size: int, num_chunk_frames: int,
+                 initializer_range: float, layer_dropout: float,
+                 layer_norm_eps: float, do_stable_layer_norm: bool,
+                 hidden_layers: int, hidden_groups: int, hidden_size: int,
+                 hidden_dropout: float, hidden_activation: str,
+                 attention_heads: int, attention_dropout: float,
+                 intermediate_size: int, activation_dropout: float,
+                 positional_embedding: str,
+                 convolutional_positional_embedding_kernel: int,
+                 convolutional_positional_embedding_groups: int,
+                 convolutional_positional_embedding_activation: str,
+                 name: str) -> None:
         self.embedding_size = embedding_size
         self.num_chunk_frames = num_chunk_frames
         self.initializer_range = initializer_range
@@ -167,14 +167,11 @@ class TransformerEncoder(tf.keras.layers.Layer):
                 continue
             group_index = int(
                 layer_index /
-                (self.config.hidden_layers / self.config.hidden_groups)
-            )
+                (self.config.hidden_layers / self.config.hidden_groups))
             layer_group = self.layer_groups[group_index]
-            hidden_states = layer_group(
-                hidden_states=hidden_states,
-                attention_mask=attention_mask,
-                training=training
-            )
+            hidden_states = layer_group(hidden_states=hidden_states,
+                                        attention_mask=attention_mask,
+                                        training=training)
         if self.config.do_stable_layer_norm:
             hidden_states = self.layer_norm(hidden_states)
         return hidden_states
@@ -183,25 +180,28 @@ class TransformerEncoder(tf.keras.layers.Layer):
     def _create_layer_groups(
             config: TransformerEncoderConfig) -> List[tf.keras.layers.Layer]:
         return [
-            TransformerEncoder._create_encoder_layer(
-                config, f"layer_groups.{i}")
+            TransformerEncoder._create_encoder_layer(config,
+                                                     f"layer_groups.{i}")
             for i in range(config.hidden_groups)
         ]
 
     @staticmethod
-    def _create_encoder_layer(
-            config: TransformerEncoderConfig, name: str
-    ) -> tf.keras.layers.Layer:
+    def _create_encoder_layer(config: TransformerEncoderConfig,
+                              name: str) -> tf.keras.layers.Layer:
         attention = TransformerEncoder._create_attention(config)
         feed_forward = TransformerEncoder._create_feed_forward(config)
         if config.do_stable_layer_norm:
-            return EncoderLayerStableLayerNorm(
-                attention, feed_forward, config.hidden_dropout,
-                config.layer_norm_eps, name=name)
+            return EncoderLayerStableLayerNorm(attention,
+                                               feed_forward,
+                                               config.hidden_dropout,
+                                               config.layer_norm_eps,
+                                               name=name)
         else:
-            return EncoderLayer(
-                attention, feed_forward, config.hidden_dropout,
-                config.layer_norm_eps, name=name)
+            return EncoderLayer(attention,
+                                feed_forward,
+                                config.hidden_dropout,
+                                config.layer_norm_eps,
+                                name=name)
 
     @staticmethod
     def _create_positional_embedding(
@@ -213,18 +213,21 @@ class TransformerEncoder(tf.keras.layers.Layer):
                 kernel_size=config.convolutional_positional_embedding_kernel,
                 groups=config.convolutional_positional_embedding_groups,
                 explicit_padding=(
-                        config.convolutional_positional_embedding_kernel // 2),
+                    config.convolutional_positional_embedding_kernel // 2),
                 name="pos_conv",
             )
             positional_embedding = ConvolutionalPositionalEmbedding(
-                conv, config.convolutional_positional_embedding_kernel,
+                conv,
+                config.convolutional_positional_embedding_kernel,
                 config.convolutional_positional_embedding_activation,
                 name="pos_conv_embed")
         elif (config.positional_embedding ==
               TransformerEncoderConfig.LEARNED_POSITIONAL_EMBEDDING):
             positional_embedding = LearnedPositionalEmbedding(
-                config.embedding_size, config.num_chunk_frames,
-                config.initializer_range, name="pos_learned_embed")
+                config.embedding_size,
+                config.num_chunk_frames,
+                config.initializer_range,
+                name="pos_learned_embed")
         elif (config.positional_embedding ==
               TransformerEncoderConfig.SINUSOIDAL_POSITIONAL_EMBEDDING):
             positional_embedding = SinusoidalPositionalEmbedding(
@@ -237,27 +240,29 @@ class TransformerEncoder(tf.keras.layers.Layer):
 
     @staticmethod
     def _create_attention(config: TransformerEncoderConfig) -> "Attention":
-        return Attention(
-            embed_dim=config.hidden_size, num_heads=config.attention_heads,
-            dropout=config.attention_dropout, is_decoder=False,
-            name="attention")
+        return Attention(embed_dim=config.hidden_size,
+                         num_heads=config.attention_heads,
+                         dropout=config.attention_dropout,
+                         is_decoder=False,
+                         name="attention")
 
     @staticmethod
     def _create_feed_forward(config: TransformerEncoderConfig) -> "FeedForward":
-        return FeedForward(
-            config.intermediate_size, config.hidden_size,
-            config.activation_dropout, config.hidden_dropout,
-            config.initializer_range, config.hidden_activation,
-            name="feed_forward")
+        return FeedForward(config.intermediate_size,
+                           config.hidden_size,
+                           config.activation_dropout,
+                           config.hidden_dropout,
+                           config.initializer_range,
+                           config.hidden_activation,
+                           name="feed_forward")
 
 
 # Copied from
 # transformers.models.wav2vec2.modeling_tf_wav2vec2.TFWav2Vec2EncoderLayer
 class EncoderLayer(tf.keras.layers.Layer):
 
-    def __init__(
-            self, attention, feed_forward, hidden_dropout: float,
-            layer_norm_eps: float, name: str):
+    def __init__(self, attention, feed_forward, hidden_dropout: float,
+                 layer_norm_eps: float, name: str):
         super().__init__(name=name)
         self.attention = attention
         self.dropout = tf.keras.layers.Dropout(hidden_dropout)
@@ -265,8 +270,7 @@ class EncoderLayer(tf.keras.layers.Layer):
             epsilon=layer_norm_eps, name="layer_norm")
         self.feed_forward = feed_forward
         self.final_layer_norm = tf.keras.layers.LayerNormalization(
-            epsilon=layer_norm_eps, name="final_layer_norm"
-        )
+            epsilon=layer_norm_eps, name="final_layer_norm")
 
     def call(
         self,
@@ -276,8 +280,7 @@ class EncoderLayer(tf.keras.layers.Layer):
     ) -> Tensor:
         attn_residual = hidden_states
         hidden_states, attn_weights, _ = self.attention(
-            hidden_states, attention_mask=attention_mask, training=training
-        )
+            hidden_states, attention_mask=attention_mask, training=training)
         hidden_states = self.dropout(hidden_states, training=training)
         hidden_states = attn_residual + hidden_states
         hidden_states = self.layer_norm(hidden_states)
@@ -290,9 +293,8 @@ class EncoderLayer(tf.keras.layers.Layer):
 # transformers.models.wav2vec2.modeling_tf_wav2vec2.TFWav2Vec2EncoderLayerStableLayerNorm
 class EncoderLayerStableLayerNorm(tf.keras.layers.Layer):
 
-    def __init__(
-            self, attention, feed_forward, hidden_dropout: float,
-            layer_norm_eps: float, name: str) -> None:
+    def __init__(self, attention, feed_forward, hidden_dropout: float,
+                 layer_norm_eps: float, name: str) -> None:
         super().__init__(name=name)
         self.attention = attention
         self.dropout = tf.keras.layers.Dropout(hidden_dropout)
@@ -300,8 +302,7 @@ class EncoderLayerStableLayerNorm(tf.keras.layers.Layer):
             epsilon=layer_norm_eps, name="layer_norm")
         self.feed_forward = feed_forward
         self.final_layer_norm = tf.keras.layers.LayerNormalization(
-            epsilon=layer_norm_eps, name="final_layer_norm"
-        )
+            epsilon=layer_norm_eps, name="final_layer_norm")
 
     def call(
         self,
@@ -312,8 +313,7 @@ class EncoderLayerStableLayerNorm(tf.keras.layers.Layer):
         attn_residual = hidden_states
         hidden_states = self.layer_norm(hidden_states)
         hidden_states, attn_weights, _ = self.attention(
-            hidden_states, attention_mask=attention_mask, training=training
-        )
+            hidden_states, attention_mask=attention_mask, training=training)
         hidden_states = self.dropout(hidden_states, training=training)
         hidden_states = attn_residual + hidden_states
         hidden_states = hidden_states + self.feed_forward(
@@ -341,16 +341,26 @@ class Attention(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(dropout)
         self.head_dim = embed_dim // num_heads
         assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
-        self.scaling = self.head_dim ** -0.5
+        self.scaling = self.head_dim**-0.5
         self.is_decoder = is_decoder
 
-        self.k_proj = tf.keras.layers.Dense(embed_dim, use_bias=bias, name="k_proj")
-        self.q_proj = tf.keras.layers.Dense(embed_dim, use_bias=bias, name="q_proj")
-        self.v_proj = tf.keras.layers.Dense(embed_dim, use_bias=bias, name="v_proj")
-        self.out_proj = tf.keras.layers.Dense(embed_dim, use_bias=bias, name="out_proj")
+        self.k_proj = tf.keras.layers.Dense(embed_dim,
+                                            use_bias=bias,
+                                            name="k_proj")
+        self.q_proj = tf.keras.layers.Dense(embed_dim,
+                                            use_bias=bias,
+                                            name="q_proj")
+        self.v_proj = tf.keras.layers.Dense(embed_dim,
+                                            use_bias=bias,
+                                            name="v_proj")
+        self.out_proj = tf.keras.layers.Dense(embed_dim,
+                                              use_bias=bias,
+                                              name="out_proj")
 
     def _shape(self, tensor: Tensor, seq_len: int, bsz: int):
-        return tf.transpose(tf.reshape(tensor, (bsz, seq_len, self.num_heads, self.head_dim)), (0, 2, 1, 3))
+        return tf.transpose(
+            tf.reshape(tensor, (bsz, seq_len, self.num_heads, self.head_dim)),
+            (0, 2, 1, 3))
 
     def call(
         self,
@@ -400,7 +410,8 @@ class Attention(tf.keras.layers.Layer):
             past_key_value = (key_states, value_states)
 
         proj_shape = (bsz * self.num_heads, -1, self.head_dim)
-        query_states = tf.reshape(self._shape(query_states, tgt_len, bsz), proj_shape)
+        query_states = tf.reshape(self._shape(query_states, tgt_len, bsz),
+                                  proj_shape)
         key_states = tf.reshape(key_states, proj_shape)
         value_states = tf.reshape(value_states, proj_shape)
 
@@ -413,7 +424,8 @@ class Attention(tf.keras.layers.Layer):
             tf.debugging.assert_equal(
                 _shape_list(attn_weights),
                 [bsz * self.num_heads, tgt_len, src_len],
-                message=f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is {_shape_list(attn_weights)}",
+                message=
+                f"Attention weights should be of size {(bsz * self.num_heads, tgt_len, src_len)}, but is {_shape_list(attn_weights)}",
             )
 
         if attention_mask is not None:
@@ -423,12 +435,16 @@ class Attention(tf.keras.layers.Layer):
                 tf.debugging.assert_equal(
                     _shape_list(attention_mask),
                     [bsz, 1, tgt_len, src_len],
-                    message=f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {_shape_list(attention_mask)}",
+                    message=
+                    f"Attention mask should be of size {(bsz, 1, tgt_len, src_len)}, but is {_shape_list(attention_mask)}",
                 )
 
             attention_mask = tf.cast(attention_mask, dtype=attn_weights.dtype)
-            attn_weights = tf.reshape(attn_weights, (bsz, self.num_heads, tgt_len, src_len)) + attention_mask
-            attn_weights = tf.reshape(attn_weights, (bsz * self.num_heads, tgt_len, src_len))
+            attn_weights = tf.reshape(
+                attn_weights,
+                (bsz, self.num_heads, tgt_len, src_len)) + attention_mask
+            attn_weights = tf.reshape(attn_weights,
+                                      (bsz * self.num_heads, tgt_len, src_len))
 
         attn_weights = tf.nn.softmax(attn_weights, axis=-1)
 
@@ -439,13 +455,15 @@ class Attention(tf.keras.layers.Layer):
                 tf.debugging.assert_equal(
                     _shape_list(layer_head_mask),
                     [self.num_heads],
-                    message=f"Head mask for a single layer should be of size {(self.num_heads)}, but is {_shape_list(layer_head_mask)}",
+                    message=
+                    f"Head mask for a single layer should be of size {(self.num_heads)}, but is {_shape_list(layer_head_mask)}",
                 )
 
-            attn_weights = tf.reshape(layer_head_mask, (1, -1, 1, 1)) * tf.reshape(
-                attn_weights, (bsz, self.num_heads, tgt_len, src_len)
-            )
-            attn_weights = tf.reshape(attn_weights, (bsz * self.num_heads, tgt_len, src_len))
+            attn_weights = tf.reshape(
+                layer_head_mask, (1, -1, 1, 1)) * tf.reshape(
+                    attn_weights, (bsz, self.num_heads, tgt_len, src_len))
+            attn_weights = tf.reshape(attn_weights,
+                                      (bsz * self.num_heads, tgt_len, src_len))
 
         attn_probs = self.dropout(attn_weights, training=training)
         attn_output = tf.matmul(attn_probs, value_states)
@@ -456,16 +474,19 @@ class Attention(tf.keras.layers.Layer):
             tf.debugging.assert_equal(
                 _shape_list(attn_output),
                 [bsz * self.num_heads, tgt_len, self.head_dim],
-                message=f"`attn_output` should be of size {(bsz, self.num_heads, tgt_len, self.head_dim)}, but is {_shape_list(attn_output)}",
+                message=
+                f"`attn_output` should be of size {(bsz, self.num_heads, tgt_len, self.head_dim)}, but is {_shape_list(attn_output)}",
             )
 
         attn_output = tf.transpose(
-            tf.reshape(attn_output, (bsz, self.num_heads, tgt_len, self.head_dim)), (0, 2, 1, 3)
-        )
+            tf.reshape(attn_output,
+                       (bsz, self.num_heads, tgt_len, self.head_dim)),
+            (0, 2, 1, 3))
         attn_output = tf.reshape(attn_output, (bsz, tgt_len, embed_dim))
 
         attn_output = self.out_proj(attn_output)
-        attn_weights: Tensor = tf.reshape(attn_weights, (bsz, self.num_heads, tgt_len, src_len))
+        attn_weights: Tensor = tf.reshape(
+            attn_weights, (bsz, self.num_heads, tgt_len, src_len))
 
         return attn_output, attn_weights, past_key_value
 
@@ -474,10 +495,9 @@ class Attention(tf.keras.layers.Layer):
 # transformers.models.wav2vec2.modeling_tf_wav2vec2.TFWav2Vec2FeedForward
 class FeedForward(tf.keras.layers.Layer):
 
-    def __init__(
-            self, intermediate_size: int, hidden_size: int,
-            activation_dropout: float, hidden_dropout: float,
-            initializer_range, hidden_act, name: str):
+    def __init__(self, intermediate_size: int, hidden_size: int,
+                 activation_dropout: float, hidden_dropout: float,
+                 initializer_range, hidden_act, name: str):
         super().__init__(name=name)
         self.intermediate_dropout = tf.keras.layers.Dropout(activation_dropout)
         self.intermediate_dense = tf.keras.layers.Dense(
@@ -495,13 +515,11 @@ class FeedForward(tf.keras.layers.Layer):
         )
         self.output_dropout = tf.keras.layers.Dropout(hidden_dropout)
 
-    def call(
-            self, hidden_states: Tensor,
-            training: bool = False) -> Tensor:
+    def call(self, hidden_states: Tensor, training: bool = False) -> Tensor:
         hidden_states = self.intermediate_dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
-        hidden_states = self.intermediate_dropout(
-            hidden_states, training=training)
+        hidden_states = self.intermediate_dropout(hidden_states,
+                                                  training=training)
         hidden_states = self.output_dense(hidden_states)
         hidden_states = self.output_dropout(hidden_states, training=training)
         return hidden_states
@@ -511,9 +529,8 @@ class FeedForward(tf.keras.layers.Layer):
 # transformers.models.wav2vec2.modeling_tf_wav2vec2.TFWav2Vec2PositionalConvEmbedding
 class ConvolutionalPositionalEmbedding(tf.keras.layers.Layer):
 
-    def __init__(
-            self, conv, num_conv_pos_embeddings, feat_extract_activation,
-            name: str) -> None:
+    def __init__(self, conv, num_conv_pos_embeddings, feat_extract_activation,
+                 name: str) -> None:
         super().__init__(name=name)
         self.conv = conv
         self.padding = SamePadLayer(num_conv_pos_embeddings)
@@ -529,9 +546,8 @@ class ConvolutionalPositionalEmbedding(tf.keras.layers.Layer):
 # Copied from transformers.models.bert.modeling_tf_bert.TFBertEmbeddings.call
 class LearnedPositionalEmbedding(tf.keras.layers.Layer):
 
-    def __init__(
-            self, embedding_size, max_position_embeddings, initializer_range,
-            name: str):
+    def __init__(self, embedding_size, max_position_embeddings,
+                 initializer_range, name: str):
         super().__init__(name=name)
         self.embedding_size = embedding_size
         self.max_position_embeddings = max_position_embeddings
@@ -550,12 +566,12 @@ class LearnedPositionalEmbedding(tf.keras.layers.Layer):
     # transformers.models.bert.modeling_tf_bert.TFBertEmbeddings.call
     def call(self, hidden_states: Tensor) -> Tensor:
         input_shape = _shape_list(hidden_states)[:-1]
-        position_ids = tf.expand_dims(
-            tf.range(start=0, limit=input_shape[1]), axis=0)
-        position_embeds = tf.gather(
-            params=self.position_embeddings, indices=position_ids)
-        position_embeds = tf.tile(
-            input=position_embeds, multiples=(input_shape[0], 1, 1))
+        position_ids = tf.expand_dims(tf.range(start=0, limit=input_shape[1]),
+                                      axis=0)
+        position_embeds = tf.gather(params=self.position_embeddings,
+                                    indices=position_ids)
+        position_embeds = tf.tile(input=position_embeds,
+                                  multiples=(input_shape[0], 1, 1))
         return position_embeds
 
 
@@ -564,8 +580,8 @@ class LearnedPositionalEmbedding(tf.keras.layers.Layer):
 class SinusoidalPositionalEmbedding(tf.keras.layers.Layer):
     """This module produces sinusoidal positional embeddings of any length."""
 
-    def __init__(
-            self, num_positions: int, embedding_size: int, name: str) -> None:
+    def __init__(self, num_positions: int, embedding_size: int,
+                 name: str) -> None:
         super().__init__(name=name)
         if embedding_size % 2 != 0:
             raise NotImplementedError(
@@ -594,13 +610,11 @@ class SinusoidalPositionalEmbedding(tf.keras.layers.Layer):
         not interleaved. The cos features are in the 2nd half of the vector.
         [dim // 2:]
         """
-        position_enc = np.array(
-            [
-                [pos / np.power(10000, 2 * (j // 2) / embedding_size)
-                 for j in range(embedding_size)]
-                for pos in range(n_pos)
-            ]
-        )
+        position_enc = np.array([[
+            pos / np.power(10000, 2 * (j // 2) / embedding_size)
+            for j in range(embedding_size)
+        ]
+                                 for pos in range(n_pos)])
         table = np.zeros_like(position_enc)
         # index 0 is all zero
         table[:, 0:(embedding_size // 2)] = np.sin(position_enc[:, 0::2])
@@ -621,13 +635,14 @@ class SinusoidalPositionalEmbedding(tf.keras.layers.Layer):
 # Copied from
 # transformers.models.wav2vec2.modeling_tf_wav2vec2.TFWav2Vec2SamePadLayer
 class SamePadLayer(tf.keras.layers.Layer):
+
     def __init__(self, num_conv_pos_embeddings, **kwargs):
         super().__init__(**kwargs)
         self.num_pad_remove = 1 if num_conv_pos_embeddings % 2 == 0 else 0
 
     def call(self, hidden_states):
         if self.num_pad_remove > 0:
-            hidden_states = hidden_states[:, : -self.num_pad_remove, :]
+            hidden_states = hidden_states[:, :-self.num_pad_remove, :]
         return hidden_states
 
 
@@ -636,7 +651,8 @@ class SamePadLayer(tf.keras.layers.Layer):
 class WeightNormConv1D(tf.keras.layers.Conv1D):
     """Adapted from https://www.tensorflow.org/probability/api_docs/python/tfp/layers/weight_norm/WeightNorm"""
 
-    def __init__(self, filters, kernel_size, groups, explicit_padding, **kwargs):
+    def __init__(self, filters, kernel_size, groups, explicit_padding,
+                 **kwargs):
         super().__init__(
             filters=filters,
             kernel_size=kernel_size,
@@ -653,12 +669,15 @@ class WeightNormConv1D(tf.keras.layers.Conv1D):
 
     def _init_norm(self):
         """Set the norm of the weight vector."""
-        kernel_norm = tf.sqrt(tf.reduce_sum(tf.square(self.weight_v), axis=self.kernel_norm_axes))
+        kernel_norm = tf.sqrt(
+            tf.reduce_sum(tf.square(self.weight_v), axis=self.kernel_norm_axes))
         self.weight_g.assign(kernel_norm[:, tf.newaxis, tf.newaxis])
 
     def _normalize_kernel(self):
         """Generate normalized weights."""
-        kernel = tf.nn.l2_normalize(self.weight_v, axis=self.kernel_norm_axes) * tf.transpose(self.weight_g)
+        kernel = tf.nn.l2_normalize(self.weight_v,
+                                    axis=self.kernel_norm_axes) * tf.transpose(
+                                        self.weight_g)
         self.kernel = tf.transpose(kernel)
 
     def build(self, input_shape):
@@ -668,7 +687,9 @@ class WeightNormConv1D(tf.keras.layers.Conv1D):
             input_shape[-2] += self.explicit_padding * 2
             super().build(input_shape)
 
-            self.kernel = tf.Variable(tf.transpose(self.kernel), name="weight_v", trainable=True)
+            self.kernel = tf.Variable(tf.transpose(self.kernel),
+                                      name="weight_v",
+                                      trainable=True)
             self.weight_v = self.kernel
 
             self.weight_g = self.add_weight(
@@ -678,7 +699,10 @@ class WeightNormConv1D(tf.keras.layers.Conv1D):
                 dtype=self.weight_v.dtype,
                 trainable=True,
             )
-            self.bias = self.add_weight(name="bias", shape=(self.filters,), initializer="zeros", trainable=True)
+            self.bias = self.add_weight(name="bias",
+                                        shape=(self.filters,),
+                                        initializer="zeros",
+                                        trainable=True)
 
     def call(self, inputs):
         if not self.initialized:
@@ -687,7 +711,10 @@ class WeightNormConv1D(tf.keras.layers.Conv1D):
 
         self._normalize_kernel()
 
-        padded_inputs = tf.pad(inputs, ((0, 0), (self.explicit_padding, self.explicit_padding), (0, 0)))
+        padded_inputs = tf.pad(inputs,
+                               ((0, 0),
+                                (self.explicit_padding, self.explicit_padding),
+                                (0, 0)))
         output = super().call(padded_inputs)
 
         return output

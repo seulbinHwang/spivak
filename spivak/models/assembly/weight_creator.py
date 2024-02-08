@@ -46,9 +46,8 @@ class IdentityWeightCreator(WeightCreatorInterface):
     def __init__(self, class_weights: np.ndarray) -> None:
         self._class_weights = class_weights
 
-    def video_weight_inputs(
-            self, video_labels: np.ndarray,
-            video_targets: np.ndarray) -> np.ndarray:
+    def video_weight_inputs(self, video_labels: np.ndarray,
+                            video_targets: np.ndarray) -> np.ndarray:
         num_frames = video_labels.shape[0]
         return np.tile(self._class_weights, (num_frames, 1))
 
@@ -61,8 +60,8 @@ class IdentityWeightCreator(WeightCreatorInterface):
 
 class SampledWeightCreator(WeightCreatorInterface):
 
-    def __init__(
-            self, weight_radius: float, negative_sampling_rate: float) -> None:
+    def __init__(self, weight_radius: float,
+                 negative_sampling_rate: float) -> None:
         # TODO: maybe add support for input class weights.
         self._weight_radius = weight_radius
         self._negative_sampling_rate = negative_sampling_rate
@@ -73,20 +72,22 @@ class SampledWeightCreator(WeightCreatorInterface):
     def video_weight_inputs(self, video_labels, video_targets):
         non_zeros = np.nonzero(video_labels)
         shape = video_labels.shape
-        return _sampled_video_weight_inputs(
-            non_zeros, self._weight_radius, shape)
+        return _sampled_video_weight_inputs(non_zeros, self._weight_radius,
+                                            shape)
 
     def tf_chunk_weights(self, chunk_weight_inputs):
-        return _tf_sampled_chunk_weights(
-            chunk_weight_inputs, self._negative_sampling_rate, self._normalizer)
+        return _tf_sampled_chunk_weights(chunk_weight_inputs,
+                                         self._negative_sampling_rate,
+                                         self._normalizer)
 
     def chunk_weights(self, chunk_weight_inputs):
-        return _sampled_chunk_weights(
-            chunk_weight_inputs, self._negative_sampling_rate, self._normalizer)
+        return _sampled_chunk_weights(chunk_weight_inputs,
+                                      self._negative_sampling_rate,
+                                      self._normalizer)
 
 
-def read_class_weights(
-        class_weights_path: Path, label_map: LabelMap) -> np.ndarray:
+def read_class_weights(class_weights_path: Path,
+                       label_map: LabelMap) -> np.ndarray:
     if not class_weights_path.exists():
         return np.ones(label_map.num_classes())
     num_classes = label_map.num_classes()
@@ -104,15 +105,15 @@ def read_class_weights(
     return class_weights
 
 
-def create_frame_range(
-        frame_index: int, radius: float, n_frames: int) -> np.ndarray:
+def create_frame_range(frame_index: int, radius: float,
+                       n_frames: int) -> np.ndarray:
     start = max(math.ceil(frame_index - radius), 0)
     end = min(math.floor(frame_index + radius) + 1, n_frames)
     return np.arange(start, end)
 
 
-def _compute_expected_selection_rate(
-        radius: float, negative_sampling_rate: float) -> float:
+def _compute_expected_selection_rate(radius: float,
+                                     negative_sampling_rate: float) -> float:
     # TODO: If we're going to actually use this code flow, compute it based on a
     #  set of videos, instead of trying to guess the positive_selection_rate,
     #  which does not account for overlaps.
@@ -122,8 +123,8 @@ def _compute_expected_selection_rate(
     # larger videos to have a larger influence over the weights.
     positive_rate = EXPECTED_POSITIVE_RATE
     positive_selection_rate = min(1.0, 2 * radius * positive_rate)
-    return ((1.0 - positive_selection_rate) * negative_sampling_rate
-            + positive_selection_rate * 1.0)
+    return ((1.0 - positive_selection_rate) * negative_sampling_rate +
+            positive_selection_rate * 1.0)
 
 
 def _sampled_video_weight_inputs(non_zeros, radius: float, shape):
@@ -137,20 +138,19 @@ def _sampled_video_weight_inputs(non_zeros, radius: float, shape):
     return weights
 
 
-def _tf_sampled_chunk_weights(
-        chunk_frame_weight_windows, negative_sampling_rate, normalizer):
+def _tf_sampled_chunk_weights(chunk_frame_weight_windows,
+                              negative_sampling_rate, normalizer):
     random_negative_frames = _tf_sample_negative_frames(
         negative_sampling_rate, tf.shape(chunk_frame_weight_windows))
-    selected_frames = tf.maximum(
-        chunk_frame_weight_windows, random_negative_frames)
+    selected_frames = tf.maximum(chunk_frame_weight_windows,
+                                 random_negative_frames)
     return selected_frames / normalizer
 
 
-def _sampled_chunk_weights(
-        frame_weight_windows: np.ndarray, negative_sampling_rate: float,
-        normalizer: float):
-    selected_frames = _sample_negative_frames(
-        negative_sampling_rate, frame_weight_windows.shape)
+def _sampled_chunk_weights(frame_weight_windows: np.ndarray,
+                           negative_sampling_rate: float, normalizer: float):
+    selected_frames = _sample_negative_frames(negative_sampling_rate,
+                                              frame_weight_windows.shape)
     selected_frames[frame_weight_windows > 0] = 1.0
     return selected_frames / normalizer
 
@@ -161,8 +161,8 @@ def _tf_sample_negative_frames(negative_sampling_rate: float, shape):
     elif negative_sampling_rate == 0.0:
         return tf.zeros(shape)
     else:
-        return tfp.distributions.Bernoulli(
-            probs=negative_sampling_rate, dtype=tf.float32).sample(shape)
+        return tfp.distributions.Bernoulli(probs=negative_sampling_rate,
+                                           dtype=tf.float32).sample(shape)
 
 
 def _sample_negative_frames(negative_sampling_rate, shape):

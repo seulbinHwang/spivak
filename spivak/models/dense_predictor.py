@@ -28,15 +28,16 @@ OUTPUT_DELTA_AUX = "delta_aux"
 PREDICTION_OUTPUTS_TO_SAVE = [
     OUTPUT_DETECTION_SCORE, OUTPUT_DETECTION_SCORE_NMS,
     OUTPUT_DETECTION_THRESHOLDED, OUTPUT_CONFIDENCE, OUTPUT_DELTA,
-    OUTPUT_SEGMENTATION]
+    OUTPUT_SEGMENTATION
+]
 
 
 class DensePredictor(PredictorInterface):
 
-    def __init__(
-            self, model: Model, predictor_heads: List[PredictorHeadInterface],
-            video_chunk_iterator_provider: VideoChunkIteratorProvider,
-            throw_out_delta: bool, profile: bool) -> None:
+    def __init__(self, model: Model,
+                 predictor_heads: List[PredictorHeadInterface],
+                 video_chunk_iterator_provider: VideoChunkIteratorProvider,
+                 throw_out_delta: bool, profile: bool) -> None:
         self._model = model
         self._predictor_heads = predictor_heads
         self._video_chunk_iterator_provider = video_chunk_iterator_provider
@@ -50,9 +51,9 @@ class DensePredictor(PredictorInterface):
                 video_outputs, self._throw_out_delta)
         return video_outputs
 
-    def predict_video_and_save(
-            self, video_datum: VideoDatum, nms: FlexibleNonMaximumSuppression,
-            base_path: Path) -> None:
+    def predict_video_and_save(self, video_datum: VideoDatum,
+                               nms: FlexibleNonMaximumSuppression,
+                               base_path: Path) -> None:
         video_outputs = self.predict_video(video_datum)
         DensePredictor.save_predictions(video_outputs, nms, base_path)
         DensePredictor.save_labels(video_datum, base_path)
@@ -64,9 +65,9 @@ class DensePredictor(PredictorInterface):
         self._model.save(model_path)
 
     @staticmethod
-    def save_predictions(
-            video_predictions: VideoOutputs, nms: FlexibleNonMaximumSuppression,
-            base_path: Path) -> None:
+    def save_predictions(video_predictions: VideoOutputs,
+                         nms: FlexibleNonMaximumSuppression,
+                         base_path: Path) -> None:
         if OUTPUT_DETECTION_SCORE in video_predictions:
             detection_scores = video_predictions[OUTPUT_DETECTION_SCORE]
             # Apply non-maxima suppression if required
@@ -106,10 +107,10 @@ class DensePredictor(PredictorInterface):
     def predict_video_base(self, video_features: np.ndarray) -> VideoOutputs:
         input_chunk_batch, valid_chunk_sizes = self._prepare_input_batch(
             video_features)
-        all_head_chunk_outputs = self._predict(
-            input_chunk_batch, valid_chunk_sizes)
-        return self._accumulate_all_head_chunk_outputs(
-            all_head_chunk_outputs, video_features)
+        all_head_chunk_outputs = self._predict(input_chunk_batch,
+                                               valid_chunk_sizes)
+        return self._accumulate_all_head_chunk_outputs(all_head_chunk_outputs,
+                                                       video_features)
 
     def _prepare_input_batch(
             self, video_features: np.ndarray) -> Tuple[np.ndarray, List[int]]:
@@ -117,9 +118,8 @@ class DensePredictor(PredictorInterface):
             video_features)
         return input_chunk_iterator.prepare_input_batch()
 
-    def _predict(
-            self, input_chunk_batch: np.ndarray,
-            valid_chunk_sizes: List[int]) -> List[List[np.ndarray]]:
+    def _predict(self, input_chunk_batch: np.ndarray,
+                 valid_chunk_sizes: List[int]) -> List[List[np.ndarray]]:
         # predict_on_batch() seems to be safer than predict() relating to memory
         # leak issues: https://github.com/keras-team/keras/issues/13118.
         # Unfortunately, it might require more total GPU memory. In spite of
@@ -133,46 +133,43 @@ class DensePredictor(PredictorInterface):
         if len(self._predictor_heads) == 1:
             all_head_chunk_output_batch = [all_head_chunk_output_batch]
         # Postprocess the result.
-        return [
-            [
-                _post_process(
-                    head_chunk_output_batch[c:c + 1], predictor_head,
-                    valid_size)
-                for c, valid_size in enumerate(valid_chunk_sizes)
-            ]
-            for predictor_head, head_chunk_output_batch in zip(
-                self._predictor_heads, all_head_chunk_output_batch)
+        return [[
+            _post_process(head_chunk_output_batch[c:c + 1], predictor_head,
+                          valid_size)
+            for c, valid_size in enumerate(valid_chunk_sizes)
         ]
+                for predictor_head, head_chunk_output_batch in zip(
+                    self._predictor_heads, all_head_chunk_output_batch)]
 
     def _accumulate_all_head_chunk_outputs(
             self, all_head_chunk_outputs: List[List[np.ndarray]],
             video_features: np.ndarray) -> Dict[str, np.ndarray]:
         return {
-            predictor_head.name: self._accumulate_head_chunk_outputs(
-                head_chunk_outputs, video_features, predictor_head)
+            predictor_head.name:
+                self._accumulate_head_chunk_outputs(head_chunk_outputs,
+                                                    video_features,
+                                                    predictor_head)
             for predictor_head, head_chunk_outputs in zip(
                 self._predictor_heads, all_head_chunk_outputs)
         }
 
     def _accumulate_head_chunk_outputs(
             self, head_chunk_outputs: List[np.ndarray],
-            video_features: np.ndarray, predictor_head: PredictorHeadInterface
-    ) -> np.ndarray:
+            video_features: np.ndarray,
+            predictor_head: PredictorHeadInterface) -> np.ndarray:
         result_chunk_iterator = self._video_chunk_iterator_provider.provide(
             video_features)
         num_frames = video_features.shape[0]
-        head_outputs_shape = (
-            num_frames, predictor_head.num_classes,
-            predictor_head.output_dimension)
+        head_outputs_shape = (num_frames, predictor_head.num_classes,
+                              predictor_head.output_dimension)
         head_outputs = np.zeros(head_outputs_shape)
-        result_chunk_iterator.accumulate_chunk_outputs(
-            head_outputs, head_chunk_outputs)
+        result_chunk_iterator.accumulate_chunk_outputs(head_outputs,
+                                                       head_chunk_outputs)
         return np.squeeze(head_outputs, axis=2)
 
 
-def create_detection_scores(
-        video_outputs: Dict[str, np.ndarray],
-        throw_out_delta: bool) -> np.ndarray:
+def create_detection_scores(video_outputs: Dict[str, np.ndarray],
+                            throw_out_delta: bool) -> np.ndarray:
     confidences = video_outputs[OUTPUT_CONFIDENCE]
     if throw_out_delta or OUTPUT_DELTA not in video_outputs:
         return confidences
@@ -200,6 +197,6 @@ def create_detection_scores(
     return detection_scores
 
 
-def _post_process(
-        model_output, predictor_head: PredictorHeadInterface, valid_size: int):
+def _post_process(model_output, predictor_head: PredictorHeadInterface,
+                  valid_size: int):
     return predictor_head.post_process(model_output)[0:valid_size]

@@ -16,15 +16,14 @@ class VideoChunkIteratorProvider:
         self._num_border_frames = num_border_frames
 
     def provide(self, video_features: np.ndarray) -> "VideoChunkIterator":
-        return VideoChunkIterator(
-            video_features, self._chunk_frames, self._num_border_frames)
+        return VideoChunkIterator(video_features, self._chunk_frames,
+                                  self._num_border_frames)
 
 
 class VideoChunkIterator:
 
-    def __init__(
-            self, video_features: np.ndarray, chunk_frames: int,
-            num_border_frames: int) -> None:
+    def __init__(self, video_features: np.ndarray, chunk_frames: int,
+                 num_border_frames: int) -> None:
         self.chunk_features_expanded = None
         self.valid_chunk_size = None
         self._output_start = None
@@ -47,9 +46,8 @@ class VideoChunkIterator:
             valid_chunk_sizes.append(self.valid_chunk_size)
         return np.concatenate(input_chunk_batch_list), valid_chunk_sizes
 
-    def accumulate_chunk_outputs(
-            self, accumulated_output: np.ndarray,
-            output_chunks: List[np.ndarray]) -> None:
+    def accumulate_chunk_outputs(self, accumulated_output: np.ndarray,
+                                 output_chunks: List[np.ndarray]) -> None:
         chunk_index = 0
         while self.has_next():
             self.next()
@@ -73,14 +71,14 @@ class VideoChunkIterator:
         else:
             # in this case, data_expanded is not as big as chunk_size, so we add
             # extra zero-padding before passing it through the network.
-            chunk_features_expanded = np.zeros((
-                self._chunk_frames, self._video_features_expanded.shape[1],
-                self._video_features_expanded.shape[2]))
+            chunk_features_expanded = np.zeros(
+                (self._chunk_frames, self._video_features_expanded.shape[1],
+                 self._video_features_expanded.shape[2]))
             chunk_features_expanded[0:self.valid_chunk_size] = \
                 self._video_features_expanded[self._chunk_start:chunk_end]
         # Prepare the batch made of one chunk for the network
-        self.chunk_features_expanded = np.expand_dims(
-            chunk_features_expanded, axis=0)
+        self.chunk_features_expanded = np.expand_dims(chunk_features_expanded,
+                                                      axis=0)
         # Figure out start and end indexes.
         is_first = (self._chunk_start == 0)
         if is_first:
@@ -88,22 +86,20 @@ class VideoChunkIterator:
         else:
             self._output_start = self._num_border_frames
         self._result_start = self._chunk_start + self._output_start
-        self._is_last = (
-                self._chunk_start >= self._num_frames - self._chunk_frames)
+        self._is_last = (self._chunk_start
+                         >= self._num_frames - self._chunk_frames)
         if self._is_last:
             self._output_end = self.valid_chunk_size
         else:
-            self._output_end = (self.valid_chunk_size -
-                                self._num_border_frames)
+            self._output_end = (self.valid_chunk_size - self._num_border_frames)
         self._result_end = self._chunk_start + self._output_end
         # Update the start index for the next iteration
         self._chunk_start += self._chunk_frames - 2 * self._num_border_frames
         if self._chunk_start > self._num_frames - self._chunk_frames:
             self._chunk_start = self._num_frames - self._chunk_frames
 
-    def accumulate(
-            self, accumulated_output: np.ndarray,
-            output_chunk: np.ndarray) -> None:
+    def accumulate(self, accumulated_output: np.ndarray,
+                   output_chunk: np.ndarray) -> None:
         result_start = self._result_start
         result_end = self._result_end
         output_start = self._output_start

@@ -47,15 +47,14 @@ NMS_DECAY_SUPPRESS = "suppress"
 NMS_DECAY_LINEAR = "linear"
 NMS_DECAY_GAUSSIAN = "gaussian"
 DATASET_TYPE_CHOICES = [
-    DATASET_TYPE_SOCCERNET,
-    DATASET_TYPE_SOCCERNET_V2,
+    DATASET_TYPE_SOCCERNET, DATASET_TYPE_SOCCERNET_V2,
     DATASET_TYPE_SOCCERNET_V2_CAMERA_SEGMENTATION,
     DATASET_TYPE_SOCCERNET_V2_SPOTTING_AND_CAMERA_SEGMENTATION,
     DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION,
-    DATASET_TYPE_SOCCERNET_V2_CHALLENGE,
-    DATASET_TYPE_CUSTOM_SPOTTING,
+    DATASET_TYPE_SOCCERNET_V2_CHALLENGE, DATASET_TYPE_CUSTOM_SPOTTING,
     DATASET_TYPE_CUSTOM_SEGMENTATION,
-    DATASET_TYPE_CUSTOM_SPOTTING_AND_SEGMENTATION]
+    DATASET_TYPE_CUSTOM_SPOTTING_AND_SEGMENTATION
+]
 
 
 class Defaults:
@@ -485,363 +484,561 @@ def dir_str_to_path(dir_str: Optional[str]) -> Path:
 
 def _create_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--results_dir",
+                        "-rd",
+                        help="Path to save/read the inference results",
+                        type=str,
+                        required=False,
+                        default=Defaults.RESULTS_DIR)
+    parser.add_argument("--pretrained_path",
+                        "-pp",
+                        help=("Pretrained models for initializing weights"),
+                        type=str,
+                        required=False,
+                        default=Defaults.PRETRAINED_PATH)
+    parser.add_argument("--features_dir",
+                        "-fd",
+                        help="Directory containing feature files.",
+                        type=str,
+                        required=False,
+                        default=Defaults.FEATURES_DIR)
+    parser.add_argument("--labels_dir",
+                        "-ld",
+                        help="Directory containing label files.",
+                        type=str,
+                        required=False,
+                        default=Defaults.LABELS_DIR)
+    parser.add_argument("--splits_dir",
+                        "-sd",
+                        help="Directory containing split files.",
+                        type=str,
+                        required=False,
+                        default=Defaults.SPLITS_DIR)
+    parser.add_argument("--dataset_type",
+                        "-dt",
+                        help="Dataset type",
+                        type=str,
+                        required=False,
+                        default=Defaults.DATASET_TYPE,
+                        choices=DATASET_TYPE_CHOICES)
+    parser.add_argument("--feature_name",
+                        "-fn",
+                        help="String describing the feature",
+                        type=str,
+                        default=Defaults.FEATURE_NAME)
+    parser.add_argument("--frame_rate",
+                        "-fr",
+                        help="Frame-rate of the features",
+                        type=float,
+                        default=Defaults.FRAME_RATE)
+    parser.add_argument("--model_weights",
+                        "-mw",
+                        help="Model weights path",
+                        type=str,
+                        default=Defaults.MODEL_WEIGHTS)
+    parser.add_argument("--model",
+                        "-m",
+                        help="Model path",
+                        type=str,
+                        default=Defaults.MODEL)
+    parser.add_argument("--config_dir",
+                        "-cd",
+                        help=("Directory containing a set of config files"),
+                        type=str,
+                        required=True)
+    parser.add_argument("--epochs",
+                        "-e",
+                        help="Number of training epochs",
+                        type=int,
+                        default=Defaults.EPOCHS)
+    parser.add_argument("--validation_epochs",
+                        "-ve",
+                        help="How frequently to run validation",
+                        type=int,
+                        default=Defaults.VALIDATION_EPOCHS)
+    parser.add_argument("--save_epochs",
+                        "-se",
+                        help="How frequently to save the model to disk",
+                        type=int,
+                        default=Defaults.SAVE_EPOCHS)
+    parser.add_argument("--batch_size",
+                        "-bs",
+                        help="Batch size (in number of chunks)",
+                        type=int,
+                        default=Defaults.BATCH_SIZE)
+    parser.add_argument("--shuffle_videos",
+                        "-sv",
+                        help="Whether to shuffle the videos when training",
+                        type=int,
+                        default=Defaults.SHUFFLE_VIDEOS,
+                        choices=[0, 1])
     parser.add_argument(
-        "--results_dir", "-rd", help="Path to save/read the inference results",
-        type=str, required=False, default=Defaults.RESULTS_DIR)
-    parser.add_argument(
-        "--pretrained_path", "-pp", help=(
-            "Pretrained models for initializing weights"),
-        type=str, required=False, default=Defaults.PRETRAINED_PATH)
-    parser.add_argument(
-        "--features_dir", "-fd", help="Directory containing feature files.",
-        type=str, required=False, default=Defaults.FEATURES_DIR)
-    parser.add_argument(
-        "--labels_dir", "-ld", help="Directory containing label files.",
-        type=str, required=False, default=Defaults.LABELS_DIR)
-    parser.add_argument(
-        "--splits_dir", "-sd", help="Directory containing split files.",
-        type=str, required=False, default=Defaults.SPLITS_DIR)
-    parser.add_argument(
-        "--dataset_type", "-dt", help="Dataset type", type=str, required=False,
-        default=Defaults.DATASET_TYPE, choices=DATASET_TYPE_CHOICES)
-    parser.add_argument(
-        "--feature_name", "-fn", help="String describing the feature", type=str,
-        default=Defaults.FEATURE_NAME)
-    parser.add_argument(
-        "--frame_rate", "-fr", help="Frame-rate of the features", type=float,
-        default=Defaults.FRAME_RATE)
-    parser.add_argument(
-        "--model_weights", "-mw", help="Model weights path", type=str,
-        default=Defaults.MODEL_WEIGHTS)
-    parser.add_argument(
-        "--model", "-m", help="Model path", type=str, default=Defaults.MODEL)
-    parser.add_argument(
-        "--config_dir", "-cd", help=(
-            "Directory containing a set of config files"), type=str,
-        required=True)
-    parser.add_argument(
-        "--epochs", "-e", help="Number of training epochs", type=int,
-        default=Defaults.EPOCHS)
-    parser.add_argument(
-        "--validation_epochs", "-ve", help="How frequently to run validation",
-        type=int, default=Defaults.VALIDATION_EPOCHS)
-    parser.add_argument(
-        "--save_epochs", "-se", help="How frequently to save the model to disk",
-        type=int, default=Defaults.SAVE_EPOCHS)
-    parser.add_argument(
-        "--batch_size", "-bs", help="Batch size (in number of chunks)",
-        type=int, default=Defaults.BATCH_SIZE)
-    parser.add_argument(
-        "--shuffle_videos", "-sv",
-        help="Whether to shuffle the videos when training", type=int,
-        default=Defaults.SHUFFLE_VIDEOS, choices=[0, 1])
-    parser.add_argument(
-        "--chunk_shuffle", "-cs",
+        "--chunk_shuffle",
+        "-cs",
         help="What portion of the dataset to buffer when shuffling the video "
-             "chunks", type=float, default=Defaults.CHUNK_SHUFFLE)
+        "chunks",
+        type=float,
+        default=Defaults.CHUNK_SHUFFLE)
     parser.add_argument(
-        "--get_chunks_parallelism", "-gcp",
+        "--get_chunks_parallelism",
+        "-gcp",
         help="How many threads to run when getting chunks from videos",
-        type=int, default=Defaults.GET_CHUNKS_PARALLELISM)
+        type=int,
+        default=Defaults.GET_CHUNKS_PARALLELISM)
+    parser.add_argument("--mixup_alpha",
+                        "-mu",
+                        help="Alpha used for mix-up",
+                        type=float,
+                        default=Defaults.MIXUP_ALPHA)
+    parser.add_argument("--sampling",
+                        "-sm",
+                        help="Sampling strategy for getting chunks from videos",
+                        type=str,
+                        default=Defaults.SAMPLING,
+                        choices=[SAMPLING_UNIFORM, SAMPLING_WEIGHTED])
     parser.add_argument(
-        "--mixup_alpha", "-mu", help="Alpha used for mix-up", type=float,
-        default=Defaults.MIXUP_ALPHA)
-    parser.add_argument(
-        "--sampling", "-sm",
-        help="Sampling strategy for getting chunks from videos", type=str,
-        default=Defaults.SAMPLING, choices=[
-            SAMPLING_UNIFORM, SAMPLING_WEIGHTED])
-    parser.add_argument(
-        "--chunks_per_minute", "-cpm",
+        "--chunks_per_minute",
+        "-cpm",
         help="How many chunks per minute to extract from video features each "
-             "time those video features are visited", type=float,
+        "time those video features are visited",
+        type=float,
         default=Defaults.CHUNKS_PER_MINUTE)
     parser.add_argument(
-        "--positive_weight_confidence", "-pwc",
+        "--positive_weight_confidence",
+        "-pwc",
         help="Overall weight of positive samples relative to negative "
-             "samples, between 0.0 and 1.0. 0.0 (the default) indicates that "
-             "the samples should not be weighted.", type=float,
+        "samples, between 0.0 and 1.0. 0.0 (the default) indicates that "
+        "the samples should not be weighted.",
+        type=float,
         default=Defaults.POSITIVE_WEIGHT_CONFIDENCE)
     parser.add_argument(
-        "--positive_weight_delta", "-pwdl",
+        "--positive_weight_delta",
+        "-pwdl",
         help="Overall weight of positive samples relative to negative "
-             "samples, between 0.0 and 1.0. 0.0 (the default) indicates that "
-             "the samples should not be weighted.", type=float,
+        "samples, between 0.0 and 1.0. 0.0 (the default) indicates that "
+        "the samples should not be weighted.",
+        type=float,
         default=Defaults.POSITIVE_WEIGHT_DELTA)
+    parser.add_argument("--segmentation_weight_temperature",
+                        "-swt",
+                        help="Temperature of the segmentation class weights.",
+                        type=float,
+                        default=Defaults.SEGMENTATION_WEIGHT_TEMPERATURE)
+    parser.add_argument("--cache_dataset",
+                        "-cds",
+                        help="Whether to cache the dataset during training.",
+                        type=int,
+                        default=Defaults.CACHE_DATASET,
+                        choices=[0, 1])
     parser.add_argument(
-        "--segmentation_weight_temperature", "-swt",
-        help="Temperature of the segmentation class weights.", type=float,
-        default=Defaults.SEGMENTATION_WEIGHT_TEMPERATURE)
-    parser.add_argument(
-        "--cache_dataset", "-cds",
-        help="Whether to cache the dataset during training.", type=int,
-        default=Defaults.CACHE_DATASET, choices=[0, 1])
-    parser.add_argument(
-        "--sampling_negative_fraction", "-snf",
+        "--sampling_negative_fraction",
+        "-snf",
         help="Fraction of negative samples when sampling chunks from videos "
-             "using the weighted sampling strategy",
-        type=float, default=Defaults.SAMPLING_NEGATIVE_FRACTION)
+        "using the weighted sampling strategy",
+        type=float,
+        default=Defaults.SAMPLING_NEGATIVE_FRACTION)
     parser.add_argument(
-        "--sampling_negative_rate_delta", "-snrd",
+        "--sampling_negative_rate_delta",
+        "-snrd",
         help="Fraction of negative outputs to use from a chunk when training "
-             "the delta head", type=float,
+        "the delta head",
+        type=float,
         default=Defaults.SAMPLING_NEGATIVE_RATE_DELTA)
     parser.add_argument(
-        "--sampling_negative_rate_confidence", "-snrc",
+        "--sampling_negative_rate_confidence",
+        "-snrc",
         help="Fraction of negative outputs to use from a chunk when training "
-             "the confidence head", type=float,
+        "the confidence head",
+        type=float,
         default=Defaults.SAMPLING_NEGATIVE_RATE_CONFIDENCE)
+    parser.add_argument("--optimizer",
+                        "-z",
+                        help="Optimizer choice",
+                        type=str,
+                        default=Defaults.OPTIMIZER,
+                        choices=[OPTIMIZER_SGD, OPTIMIZER_ADAM])
     parser.add_argument(
-        "--optimizer", "-z", help="Optimizer choice",
-        type=str, default=Defaults.OPTIMIZER,
-        choices=[OPTIMIZER_SGD, OPTIMIZER_ADAM])
-    parser.add_argument(
-        "--mixed_precision", "-mx",
+        "--mixed_precision",
+        "-mx",
         help="Whether to use mixed precision during training or not",
-        type=int, default=Defaults.MIXED_PRECISION, choices=[0, 1])
+        type=int,
+        default=Defaults.MIXED_PRECISION,
+        choices=[0, 1])
     parser.add_argument(
-        "--sam_rho", "-sr", help=(
-            "Rho for Sharpness Aware Minimization (SAM). The paper suggests "
-            "using 0.05."), type=float, default=Defaults.SAM_RHO,)
+        "--sam_rho",
+        "-sr",
+        help=("Rho for Sharpness Aware Minimization (SAM). The paper suggests "
+              "using 0.05."),
+        type=float,
+        default=Defaults.SAM_RHO,
+    )
+    parser.add_argument("--learning_rate",
+                        "-lr",
+                        help="Learning rate",
+                        type=float,
+                        default=Defaults.LEARNING_RATE)
+    parser.add_argument("--learning_rate_decay",
+                        "-lrd",
+                        help="What type of learning rate decay to apply",
+                        type=str,
+                        default=Defaults.LEARNING_RATE_DECAY,
+                        choices=[
+                            LEARNING_RATE_DECAY_EXPONENTIAL,
+                            LEARNING_RATE_DECAY_LEGACY,
+                            LEARNING_RATE_DECAY_LINEAR, LEARNING_RATE_DECAY_NONE
+                        ])
     parser.add_argument(
-        "--learning_rate", "-lr", help="Learning rate", type=float,
-        default=Defaults.LEARNING_RATE)
-    parser.add_argument(
-        "--learning_rate_decay", "-lrd",
-        help="What type of learning rate decay to apply",
-        type=str, default=Defaults.LEARNING_RATE_DECAY,
-        choices=[LEARNING_RATE_DECAY_EXPONENTIAL, LEARNING_RATE_DECAY_LEGACY,
-                 LEARNING_RATE_DECAY_LINEAR, LEARNING_RATE_DECAY_NONE])
-    parser.add_argument(
-        "--learning_rate_decay_exponential_rate", help=(
-            "Learning rate multiplier applied when using exponential "
-            "learning rate decay"), type=float,
+        "--learning_rate_decay_exponential_rate",
+        help=("Learning rate multiplier applied when using exponential "
+              "learning rate decay"),
+        type=float,
         default=Defaults.LEARNING_RATE_DECAY_EXPONENTIAL_RATE)
     parser.add_argument(
-        "--learning_rate_decay_exponential_epochs", help=(
-            "Frequency in epochs at which to decay the learning rate when "
-            "using exponential learning rate decay"), type=int,
+        "--learning_rate_decay_exponential_epochs",
+        help=("Frequency in epochs at which to decay the learning rate when "
+              "using exponential learning rate decay"),
+        type=int,
         default=Defaults.LEARNING_RATE_DECAY_EXPONENTIAL_EPOCHS)
     parser.add_argument(
-        "--learning_rate_decay_linear_epochs", "-lrdle", help=(
-            "Frequency in epochs of the learning rate decay cycle when "
-            "using linear learning rate decay"), type=int,
+        "--learning_rate_decay_linear_epochs",
+        "-lrdle",
+        help=("Frequency in epochs of the learning rate decay cycle when "
+              "using linear learning rate decay"),
+        type=int,
         default=Defaults.LEARNING_RATE_DECAY_LINEAR_EPOCHS)
+    parser.add_argument("--delta_weight",
+                        "-dw",
+                        help=("Weight of delta loss term"),
+                        type=float,
+                        default=Defaults.DELTA_WEIGHT)
+    parser.add_argument("--delta_aux_weight",
+                        "-daw",
+                        help=("Weight of auxiliary delta loss term"),
+                        type=float,
+                        default=Defaults.DELTA_AUX_WEIGHT)
+    parser.add_argument("--confidence_weight",
+                        "-cw",
+                        help=("Weight of confidence loss term"),
+                        type=float,
+                        default=Defaults.CONFIDENCE_WEIGHT)
+    parser.add_argument("--confidence_aux_weight",
+                        "-caw",
+                        help=("Weight of auxiliary confidence loss term"),
+                        type=float,
+                        default=Defaults.CONFIDENCE_AUX_WEIGHT)
+    parser.add_argument("--segmentation_weight",
+                        "-sw",
+                        help=("Weight of the segmentation loss term"),
+                        type=float,
+                        default=Defaults.SEGMENTATION_WEIGHT)
+    parser.add_argument("--detector",
+                        "-dc",
+                        help="Detector module type",
+                        type=str,
+                        default=Defaults.DETECTOR,
+                        choices=[
+                            DETECTOR_DENSE, DETECTOR_DENSE_DELTA,
+                            DETECTOR_AVERAGING_CONFIDENCE,
+                            DETECTOR_AVERAGING_DELTA
+                        ])
     parser.add_argument(
-        "--delta_weight", "-dw", help=(
-            "Weight of delta loss term"), type=float,
-        default=Defaults.DELTA_WEIGHT)
-    parser.add_argument(
-        "--delta_aux_weight", "-daw", help=(
-            "Weight of auxiliary delta loss term"), type=float,
-        default=Defaults.DELTA_AUX_WEIGHT)
-    parser.add_argument(
-        "--confidence_weight", "-cw", help=(
-            "Weight of confidence loss term"), type=float,
-        default=Defaults.CONFIDENCE_WEIGHT)
-    parser.add_argument(
-        "--confidence_aux_weight", "-caw", help=(
-            "Weight of auxiliary confidence loss term"), type=float,
-        default=Defaults.CONFIDENCE_AUX_WEIGHT)
-    parser.add_argument(
-        "--segmentation_weight", "-sw", help=(
-            "Weight of the segmentation loss term"),
-        type=float, default=Defaults.SEGMENTATION_WEIGHT)
-    parser.add_argument(
-        "--detector", "-dc", help="Detector module type", type=str,
-        default=Defaults.DETECTOR,
-        choices=[DETECTOR_DENSE, DETECTOR_DENSE_DELTA,
-                 DETECTOR_AVERAGING_CONFIDENCE, DETECTOR_AVERAGING_DELTA])
-    parser.add_argument(
-        "--unet_combiner", "-uc",
+        "--unet_combiner",
+        "-uc",
         help="Unet method for combining bottom-up and top-down layers",
-        type=str, default=Defaults.UNET_COMBINER,
-        choices=[UNET_COMBINER_CONCATENATION, UNET_COMBINER_ADDITION,
-                 UNET_COMBINER_IGNORE])
+        type=str,
+        default=Defaults.UNET_COMBINER,
+        choices=[
+            UNET_COMBINER_CONCATENATION, UNET_COMBINER_ADDITION,
+            UNET_COMBINER_IGNORE
+        ])
     parser.add_argument(
-        "--unet_upsampler", "-uu",
-        help="Unet method for upsampling in top-down layers", type=str,
+        "--unet_upsampler",
+        "-uu",
+        help="Unet method for upsampling in top-down layers",
+        type=str,
         default=Defaults.UNET_UPSAMPLER,
         choices=[UNET_UPSAMPLER_TRANSPOSE, UNET_UPSAMPLER_UPSAMPLING])
     parser.add_argument(
-        "--unet_layers_start", "-us", help=(
+        "--unet_layers_start",
+        "-us",
+        help=(
             "For the u-net, the first bottom-up layer that will be used by the "
-            "top-down network"), type=int, default=Defaults.UNET_LAYERS_START)
+            "top-down network"),
+        type=int,
+        default=Defaults.UNET_LAYERS_START)
     parser.add_argument(
-        "--unet_layers_end", "-ue", help=(
-            "For the u-net, the last bottom-up layer that will be used "
-            "by the top-down network."), type=int,
+        "--unet_layers_end",
+        "-ue",
+        help=("For the u-net, the last bottom-up layer that will be used "
+              "by the top-down network."),
+        type=int,
         default=Defaults.UNET_LAYERS_END)
+    parser.add_argument("--transformer_hidden_layers",
+                        "-thl",
+                        help="Number of layers in the Transformer encoder.",
+                        type=int,
+                        default=Defaults.TRANSFORMER_HIDDEN_LAYERS)
     parser.add_argument(
-        "--transformer_hidden_layers", "-thl",
-        help="Number of layers in the Transformer encoder.", type=int,
-        default=Defaults.TRANSFORMER_HIDDEN_LAYERS)
-    parser.add_argument(
-        "--transformer_hidden_groups", "-thg",
-        help="Number of layer groups in the Transformer encoder.", type=int,
+        "--transformer_hidden_groups",
+        "-thg",
+        help="Number of layer groups in the Transformer encoder.",
+        type=int,
         default=Defaults.TRANSFORMER_HIDDEN_GROUPS)
+    parser.add_argument("--transformer_hidden_size",
+                        "-ths",
+                        help="Size of the hidden Transformer tokens.",
+                        type=int,
+                        default=Defaults.TRANSFORMER_HIDDEN_SIZE)
     parser.add_argument(
-        "--transformer_hidden_size", "-ths",
-        help="Size of the hidden Transformer tokens.", type=int,
-        default=Defaults.TRANSFORMER_HIDDEN_SIZE)
-    parser.add_argument(
-        "--transformer_intermediate_size", "-tis", help=(
-            "Size of the intermediate units in the FFN of the Transformer "
-            "encoder."), type=int,
+        "--transformer_intermediate_size",
+        "-tis",
+        help=("Size of the intermediate units in the FFN of the Transformer "
+              "encoder."),
+        type=int,
         default=Defaults.TRANSFORMER_INTERMEDIATE_SIZE)
     parser.add_argument(
-        "--transformer_attention_heads", "-tah", help=(
-            "Number of attention heads in the Transformer encoder."), type=int,
+        "--transformer_attention_heads",
+        "-tah",
+        help=("Number of attention heads in the Transformer encoder."),
+        type=int,
         default=Defaults.TRANSFORMER_ATTENTION_HEADS)
+    parser.add_argument("--backbone",
+                        "-bb",
+                        help="Backbone for models",
+                        type=str,
+                        default=Defaults.BACKBONE,
+                        choices=[BACKBONE_UNET, BACKBONE_TRANSFORMER_ENCODER])
     parser.add_argument(
-        "--backbone", "-bb", help="Backbone for models", type=str,
-        default=Defaults.BACKBONE,
-        choices=[BACKBONE_UNET, BACKBONE_TRANSFORMER_ENCODER])
+        "--skip_init",
+        "-si",
+        help=("Whether to use SkipInit with the residual blocks."),
+        type=int,
+        default=Defaults.SKIP_INIT,
+        choices=[0, 1])
+    parser.add_argument("--chunk_duration",
+                        "-chd",
+                        help=("Duration of the video chunks (in seconds)."),
+                        type=float,
+                        default=Defaults.CHUNK_DURATION)
     parser.add_argument(
-        "--skip_init", "-si", help=(
-            "Whether to use SkipInit with the residual blocks."),
-        type=int, default=Defaults.SKIP_INIT, choices=[0, 1])
-    parser.add_argument(
-        "--chunk_duration", "-chd", help=(
-            "Duration of the video chunks (in seconds)."), type=float,
-        default=Defaults.CHUNK_DURATION)
-    parser.add_argument(
-        "--min_valid_chunk_duration", "-mchd", help=(
-            "Minimum duration of the part of a chunk that needs to be valid "
-            "(in seconds)."), type=float,
+        "--min_valid_chunk_duration",
+        "-mchd",
+        help=("Minimum duration of the part of a chunk that needs to be valid "
+              "(in seconds)."),
+        type=float,
         default=Defaults.MIN_VALID_CHUNK_DURATION)
     parser.add_argument(
-        "--nms_window", "-nw", help=(
-            "Non-maximum suppression window size to use (in seconds)"),
-        type=float, default=Defaults.NMS_WINDOW)
+        "--nms_window",
+        "-nw",
+        help=("Non-maximum suppression window size to use (in seconds)"),
+        type=float,
+        default=Defaults.NMS_WINDOW)
     parser.add_argument(
-        "--chunk_prediction_border", "-cbp", help=(
+        "--chunk_prediction_border",
+        "-cbp",
+        help=(
             "During inference, how many seconds should be discarded from each "
-            "border."), type=float, default=Defaults.CHUNK_PREDICTION_BORDER)
+            "border."),
+        type=float,
+        default=Defaults.CHUNK_PREDICTION_BORDER)
     parser.add_argument(
-        "--validation_chunk_prediction_border", "-vcbp", help=(
+        "--validation_chunk_prediction_border",
+        "-vcbp",
+        help=(
             "During validation inference, how many seconds should be discarded "
-            "from each border."), type=float,
+            "from each border."),
+        type=float,
         default=Defaults.VALIDATION_CHUNK_PREDICTION_BORDER)
     parser.add_argument(
-        "--width", "-wi", help=(
-            "Width of the models (multiplicative factor for the number "
-            "of channels of all layers)"), type=int, default=Defaults.WIDTH)
+        "--width",
+        "-wi",
+        help=("Width of the models (multiplicative factor for the number "
+              "of channels of all layers)"),
+        type=int,
+        default=Defaults.WIDTH)
     parser.add_argument(
-        "--reduction_width_factor", "-rwf", help=(
+        "--reduction_width_factor",
+        "-rwf",
+        help=(
             "Factor that multiplies the width to obtain the number of channels "
-            "of the output of the input reduction"), type=int,
+            "of the output of the input reduction"),
+        type=int,
         default=Defaults.REDUCTION_WIDTH_FACTOR)
     parser.add_argument(
-        "--head_layers", "-hl", help=(
+        "--head_layers",
+        "-hl",
+        help=(
             "Number of convolutional layers in some of the prediction heads."),
-        type=int, default=Defaults.HEAD_LAYERS)
+        type=int,
+        default=Defaults.HEAD_LAYERS)
     parser.add_argument(
-        "--decoupled_weight_decay", "-dwd", help=(
-            "Float defining the L2 weight decay applied globally via the "
-            "decoupled weight decay extension (0.0 for none)."),
-        type=float, default=Defaults.DECOUPLED_WEIGHT_DECAY)
+        "--decoupled_weight_decay",
+        "-dwd",
+        help=("Float defining the L2 weight decay applied globally via the "
+              "decoupled weight decay extension (0.0 for none)."),
+        type=float,
+        default=Defaults.DECOUPLED_WEIGHT_DECAY)
     parser.add_argument(
-        "--layer_weight_decay", "-lawd", help=(
+        "--layer_weight_decay",
+        "-lawd",
+        help=(
             "Float defining the L2 weight decay used when defining individual "
             "layers  (0.0 for no weight decay)."),
-        type=float, default=Defaults.LAYER_WEIGHT_DECAY)
+        type=float,
+        default=Defaults.LAYER_WEIGHT_DECAY)
     parser.add_argument(
-        "--input_weight_decay", "-iwd", help=(
-            "Float defining the L2 weight decay (0.0 for no weight decay) to "
-            "be used for the initial layers of the models only."),
-        type=float, default=Defaults.INPUT_WEIGHT_DECAY)
+        "--input_weight_decay",
+        "-iwd",
+        help=("Float defining the L2 weight decay (0.0 for no weight decay) to "
+              "be used for the initial layers of the models only."),
+        type=float,
+        default=Defaults.INPUT_WEIGHT_DECAY)
     parser.add_argument(
-        "--batch_norm", "-bn", help=(
-            "Whether to use batch-norm layers with convolutions."),
-        type=int, default=Defaults.BATCH_NORM, choices=[0, 1])
-    parser.add_argument(
-        "--dropout", "-do", help=(
-            "Dropout rate (rate of elements being dropped out, so higher "
-            "means more dropout)."), type=float, default=Defaults.DROPOUT)
-    parser.add_argument(
-        "--evaluate", help="Whether to run evaluation or just prediction",
-        type=int, default=Defaults.EVALUATE, choices=[0, 1])
-    parser.add_argument(
-        "--create_confusion", "-cc", help=(
-            "Whether to create and save more detailed confusion matrix data "
-            "during evaluation"), type=int, default=Defaults.CREATE_CONFUSION,
+        "--batch_norm",
+        "-bn",
+        help=("Whether to use batch-norm layers with convolutions."),
+        type=int,
+        default=Defaults.BATCH_NORM,
         choices=[0, 1])
     parser.add_argument(
-        "--apply_nms", help=(
-            "Whether or not to apply non-maximum suppression."), type=int,
+        "--dropout",
+        "-do",
+        help=("Dropout rate (rate of elements being dropped out, so higher "
+              "means more dropout)."),
+        type=float,
+        default=Defaults.DROPOUT)
+    parser.add_argument("--evaluate",
+                        help="Whether to run evaluation or just prediction",
+                        type=int,
+                        default=Defaults.EVALUATE,
+                        choices=[0, 1])
+    parser.add_argument(
+        "--create_confusion",
+        "-cc",
+        help=("Whether to create and save more detailed confusion matrix data "
+              "during evaluation"),
+        type=int,
+        default=Defaults.CREATE_CONFUSION,
+        choices=[0, 1])
+    parser.add_argument(
+        "--apply_nms",
+        help=("Whether or not to apply non-maximum suppression."),
+        type=int,
         default=Defaults.APPLY_NMS)
     parser.add_argument(
-        "--nms_decay", "-nmsd", help=(
-            "Which type of decay to apply to the scores within NMS"),
-        type=str, default=Defaults.NMS_DECAY,
+        "--nms_decay",
+        "-nmsd",
+        help=("Which type of decay to apply to the scores within NMS"),
+        type=str,
+        default=Defaults.NMS_DECAY,
         choices=[NMS_DECAY_SUPPRESS, NMS_DECAY_LINEAR, NMS_DECAY_GAUSSIAN])
+    parser.add_argument("--nms_decay_linear_min",
+                        help=("Minimum weight for the soft-NMS linear decay."),
+                        type=float,
+                        default=Defaults.NMS_DECAY_LINEAR_MIN)
+    parser.add_argument("--test_split",
+                        "-ts",
+                        help="Identifier for the split",
+                        type=str,
+                        default=Defaults.TEST_SPLIT,
+                        choices=ALL_SPLIT_KEYS)
     parser.add_argument(
-        "--nms_decay_linear_min", help=(
-            "Minimum weight for the soft-NMS linear decay."),
-        type=float, default=Defaults.NMS_DECAY_LINEAR_MIN)
-    parser.add_argument(
-        "--test_split", "-ts", help="Identifier for the split", type=str,
-        default=Defaults.TEST_SPLIT, choices=ALL_SPLIT_KEYS)
-    parser.add_argument(
-        "--prune_classes", "-pc", help=(
-            "Flag indicating whether to prune classes with few labels when "
-            "running evaluation or validation."), type=int,
-        default=Defaults.PRUNE_CLASSES, choices=[0, 1])
-    parser.add_argument(
-        "--segmentation_evaluation_old", "-seo", help=(
-            "Whether to run the old version of segmentation evaluation, "
-            "in addition to the new one."), type=int,
-        default=Defaults.SEGMENTATION_EVALUATION_OLD, choices=[0, 1])
-    parser.add_argument(
-        "--test_predict", "-tp", help=(
-            "Whether to run inference during testing, as opposed to using "
-            "pre-existing saved results"), type=int,
-        default=Defaults.TEST_PREDICT, choices=[0, 1])
-    parser.add_argument(
-        "--test_nms_only", "-tno", help=(
-            "Whether to run NMS during testing, when not running inference."),
-        type=int, default=Defaults.TEST_NMS_ONLY, choices=[0, 1])
-    parser.add_argument(
-        "--test_save_labels", "-tsl", help=(
-            "Whether to save the labels during testing, when not running "
-            "inference."), type=int, default=Defaults.TEST_SAVE_LABELS,
+        "--prune_classes",
+        "-pc",
+        help=("Flag indicating whether to prune classes with few labels when "
+              "running evaluation or validation."),
+        type=int,
+        default=Defaults.PRUNE_CLASSES,
         choices=[0, 1])
     parser.add_argument(
-        "--test_save_spotting_jsons", "-tssj", help=(
-            "Whether to convert the results to JSON format during testing."),
-        type=int, default=Defaults.TEST_SAVE_SPOTTING_JSONS, choices=[0, 1])
+        "--segmentation_evaluation_old",
+        "-seo",
+        help=("Whether to run the old version of segmentation evaluation, "
+              "in addition to the new one."),
+        type=int,
+        default=Defaults.SEGMENTATION_EVALUATION_OLD,
+        choices=[0, 1])
     parser.add_argument(
-        "--profile", "-pro", help="Whether to profile models inference.",
-        type=int, default=Defaults.PROFILE, choices=[0, 1])
+        "--test_predict",
+        "-tp",
+        help=("Whether to run inference during testing, as opposed to using "
+              "pre-existing saved results"),
+        type=int,
+        default=Defaults.TEST_PREDICT,
+        choices=[0, 1])
     parser.add_argument(
-        "--initialize_biases", "-ib",
+        "--test_nms_only",
+        "-tno",
+        help=("Whether to run NMS during testing, when not running inference."),
+        type=int,
+        default=Defaults.TEST_NMS_ONLY,
+        choices=[0, 1])
+    parser.add_argument(
+        "--test_save_labels",
+        "-tsl",
+        help=("Whether to save the labels during testing, when not running "
+              "inference."),
+        type=int,
+        default=Defaults.TEST_SAVE_LABELS,
+        choices=[0, 1])
+    parser.add_argument(
+        "--test_save_spotting_jsons",
+        "-tssj",
+        help=("Whether to convert the results to JSON format during testing."),
+        type=int,
+        default=Defaults.TEST_SAVE_SPOTTING_JSONS,
+        choices=[0, 1])
+    parser.add_argument("--profile",
+                        "-pro",
+                        help="Whether to profile models inference.",
+                        type=int,
+                        default=Defaults.PROFILE,
+                        choices=[0, 1])
+    parser.add_argument(
+        "--initialize_biases",
+        "-ib",
         help="Whether to initialize the output biases or just use zeros",
-        type=int, default=Defaults.INITIALIZE_BIASES, choices=[0, 1])
+        type=int,
+        default=Defaults.INITIALIZE_BIASES,
+        choices=[0, 1])
     parser.add_argument(
-        "--focusing_gamma", "-fg",
+        "--focusing_gamma",
+        "-fg",
         help=("Focusing parameter gamma for the focal loss. Set this to 0 in "
-              "order to not use the focal loss"), type=float,
+              "order to not use the focal loss"),
+        type=float,
         default=Defaults.FOCUSING_GAMMA)
     parser.add_argument(
-        "--dense_detection_radius", "-ddr",
+        "--dense_detection_radius",
+        "-ddr",
         help="Radius used in dense detection reparameterization and loss",
-        type=float, default=Defaults.DENSE_DETECTION_RADIUS)
+        type=float,
+        default=Defaults.DENSE_DETECTION_RADIUS)
     parser.add_argument(
-        "--throw_out_delta", "-tod", help=(
-            "Whether to use the predicted deltas during inference."),
-        type=int, default=Defaults.THROW_OUT_DELTA, choices=[0, 1])
+        "--throw_out_delta",
+        "-tod",
+        help=("Whether to use the predicted deltas during inference."),
+        type=int,
+        default=Defaults.THROW_OUT_DELTA,
+        choices=[0, 1])
     parser.add_argument(
-        "--delta_radius_multiplier", "-drm", help=(
-            "Multiply the dense detection radius by this factor for "
-            "determining delta's range"), type=float,
+        "--delta_radius_multiplier",
+        "-drm",
+        help=("Multiply the dense detection radius by this factor for "
+              "determining delta's range"),
+        type=float,
         default=Defaults.DELTA_RADIUS_MULTIPLIER)
+    parser.add_argument("--cyclic_delta",
+                        "-ccl",
+                        help="Whether the delta is cyclic",
+                        type=int,
+                        default=Defaults.CYCLIC_DELTA,
+                        choices=[0, 1])
     parser.add_argument(
-        "--cyclic_delta", "-ccl", help="Whether the delta is cyclic", type=int,
-        default=Defaults.CYCLIC_DELTA, choices=[0, 1])
-    parser.add_argument(
-        "--huber_delta", "-hd", help=(
-            "Delta used in the Huber loss. Differences used as input to the "
-            "Huber loss are expected to be between 0.0 and 1.0."), type=float,
+        "--huber_delta",
+        "-hd",
+        help=("Delta used in the Huber loss. Differences used as input to the "
+              "Huber loss are expected to be between 0.0 and 1.0."),
+        type=float,
         default=Defaults.HUBER_DELTA)
     return parser

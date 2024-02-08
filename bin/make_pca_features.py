@@ -29,8 +29,8 @@ def main() -> None:
     pca_transformer = PCATransformer(Path(args[Args.PCA_PATH]))
     feature_name = extractor_type_to_feature_name(args[Args.FEATURES])
     features_dir = Path(args[Args.FEATURES_DIR])
-    raw_features_paths = features_dir.glob(
-        "**/*" + feature_name + NUMPY_EXTENSION)
+    raw_features_paths = features_dir.glob("**/*" + feature_name +
+                                           NUMPY_EXTENSION)
     tag = args[Args.TAG]
     for raw_features_path in sorted(raw_features_paths):
         out_path = (raw_features_path.parent /
@@ -44,18 +44,21 @@ def main() -> None:
 def _get_command_line_arguments() -> Dict:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--" + Args.FEATURES_DIR, required=True,
+        "--" + Args.FEATURES_DIR,
+        required=True,
         help="Dataset directory for reading and writing features")
-    parser.add_argument(
-        "--" + Args.PCA_PATH, required=True,
-        help="Pickle containing the PCA transform")
-    parser.add_argument(
-        "--" + Args.TAG, required=False,
-        help="Tag to append to output file name", default=DEFAULT_TAG)
-    parser.add_argument(
-        "--" + Args.FEATURES, required=False,
-        help="What type of raw input features to use",
-        default=EXTRACTOR_TYPE_RESNET_TF2, choices=[EXTRACTOR_TYPE_RESNET_TF2])
+    parser.add_argument("--" + Args.PCA_PATH,
+                        required=True,
+                        help="Pickle containing the PCA transform")
+    parser.add_argument("--" + Args.TAG,
+                        required=False,
+                        help="Tag to append to output file name",
+                        default=DEFAULT_TAG)
+    parser.add_argument("--" + Args.FEATURES,
+                        required=False,
+                        help="What type of raw input features to use",
+                        default=EXTRACTOR_TYPE_RESNET_TF2,
+                        choices=[EXTRACTOR_TYPE_RESNET_TF2])
     args_dict = vars(parser.parse_args())
     return args_dict
 

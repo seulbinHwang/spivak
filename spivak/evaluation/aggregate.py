@@ -16,7 +16,6 @@ EVALUATION_AGGREGATE_PICKLE_FILE_NAME = "evaluation_aggregate.pkl"
 
 
 class EvaluationAggregate:
-
     """Aggregates and summarizes the evaluation results from different tasks."""
 
     def __init__(
@@ -37,15 +36,16 @@ class EvaluationAggregate:
             self.main_metric = 0.0
             self.main_metric_name = None
         optional_task_evaluations = [
-            spotting_evaluation, segmentation_evaluation]
+            spotting_evaluation, segmentation_evaluation
+        ]
         self._task_evaluations: List[TaskEvaluation] = [
             task_evaluation for task_evaluation in optional_task_evaluations
-            if task_evaluation]
+            if task_evaluation
+        ]
 
     def scalars_for_logging(self) -> Dict[str, float]:
         return {
-            key: value
-            for task_evaluation in self._task_evaluations
+            key: value for task_evaluation in self._task_evaluations
             for key, value in task_evaluation.scalars_for_logging().items()
         }
 
@@ -55,8 +55,8 @@ class EvaluationAggregate:
             txt_file.write(self.__str__())
 
     def save_pkl(self, save_dir: str) -> None:
-        save_path = os.path.join(
-            save_dir, EVALUATION_AGGREGATE_PICKLE_FILE_NAME)
+        save_path = os.path.join(save_dir,
+                                 EVALUATION_AGGREGATE_PICKLE_FILE_NAME)
         with open(save_path, "wb") as pkl_file:
             pickle.dump(self, pkl_file)
 

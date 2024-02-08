@@ -49,16 +49,14 @@ SECONDS_PER_MINUTE = 60
 
 class GameSpottingPredictionsWriter:
 
-    def __init__(
-            self, label_map: LabelMap, frame_rate: float,
-            threshold: float) -> None:
+    def __init__(self, label_map: LabelMap, frame_rate: float,
+                 threshold: float) -> None:
         self._label_map = label_map
         self._frame_rate = frame_rate
         self._threshold = threshold
 
-    def write(
-            self, game_path: Path, relative_game_path: Path,
-            out_path: Path) -> None:
+    def write(self, game_path: Path, relative_game_path: Path,
+              out_path: Path) -> None:
         half_one_path = game_path / PREFIX_HALF_ONE
         half_two_path = game_path / PREFIX_HALF_TWO
         detections_half_one = np.load(
@@ -67,16 +65,16 @@ class GameSpottingPredictionsWriter:
             f"{half_two_path}_{OUTPUT_DETECTION_SCORE_NMS}.npy")
         predictions = (
             self._create_half_predictions(detections_half_one, HALF_ONE) +
-            self._create_half_predictions(detections_half_two, HALF_TWO)
-        )
+            self._create_half_predictions(detections_half_two, HALF_TWO))
         output = {
             KEY_URL_LOCAL: str(relative_game_path),
-            KEY_PREDICTIONS: predictions}
+            KEY_PREDICTIONS: predictions
+        }
         with out_path.open("w") as out_file:
             json.dump(output, out_file)
 
-    def _create_half_predictions(
-            self, detections: np.ndarray, half: int) -> List[Dict]:
+    def _create_half_predictions(self, detections: np.ndarray,
+                                 half: int) -> List[Dict]:
         # detections will be negative in regions with no detections, and can
         # be zero at certain locations (due to how the NMS works), so it's
         # probably good to keep the >= below.
@@ -85,15 +83,13 @@ class GameSpottingPredictionsWriter:
         # convert them to regular ints below, as the numpy integers behave
         # differently from regular integers in certain operations.
         return [
-            self._create_prediction(
-                int(frame_index), int(class_index),
-                detections[frame_index, class_index], half)
+            self._create_prediction(int(frame_index), int(class_index),
+                                    detections[frame_index, class_index], half)
             for frame_index, class_index in zip(*detection_locations)
         ]
 
-    def _create_prediction(
-            self, frame_index: int, class_index: int, confidence: float,
-            half: int) -> Dict[str, Any]:
+    def _create_prediction(self, frame_index: int, class_index: int,
+                           confidence: float, half: int) -> Dict[str, Any]:
         label = self._label_map.int_to_label[class_index]
         seconds = frame_index / self._frame_rate
         int_milliseconds = round(seconds * 1000.0)
@@ -112,20 +108,18 @@ class GameSpottingPredictionsWriter:
 
 class GameSpottingPredictionsReader:
 
-    def __init__(
-            self, soccernet_type: str, frame_rate: float,
-            num_classes: int) -> None:
+    def __init__(self, soccernet_type: str, frame_rate: float,
+                 num_classes: int) -> None:
         self._frame_rate = frame_rate
         self._num_classes = num_classes
         self._event_dictionary = choose_spotting_event_dictionary(
             soccernet_type)
 
-    def read(
-            self, detections_path: Path, len_half_one: int,
-            len_half_two: int) -> Tuple[np.ndarray, np.ndarray]:
-        return read_game_predictions(
-            detections_path, self._event_dictionary, len_half_one,
-            len_half_two, self._frame_rate, self._num_classes)
+    def read(self, detections_path: Path, len_half_one: int,
+             len_half_two: int) -> Tuple[np.ndarray, np.ndarray]:
+        return read_game_predictions(detections_path, self._event_dictionary,
+                                     len_half_one, len_half_two,
+                                     self._frame_rate, self._num_classes)
 
 
 def choose_spotting_event_dictionary(soccernet_type: str) -> Dict[str, int]:
@@ -134,32 +128,32 @@ def choose_spotting_event_dictionary(soccernet_type: str) -> Dict[str, int]:
     elif soccernet_type in {
             SOCCERNET_TYPE_TWO, SOCCERNET_TYPE_TWO_CHALLENGE_VALIDATION,
             SOCCERNET_TYPE_TWO_CHALLENGE,
-            SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION}:
+            SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION
+    }:
         return EVENT_DICTIONARY_V2
     else:
         raise ValueError(f"Unknown soccernet type: {soccernet_type}")
 
 
-def write_all_prediction_jsons(
-        save_path: Path, video_data: List[VideoDatum],
-        label_map: LabelMap, frame_rate: float) -> None:
-    game_writer = GameSpottingPredictionsWriter(
-        label_map, frame_rate, THRESHOLD_ZERO)
+def write_all_prediction_jsons(save_path: Path, video_data: List[VideoDatum],
+                               label_map: LabelMap, frame_rate: float) -> None:
+    game_writer = GameSpottingPredictionsWriter(label_map, frame_rate,
+                                                THRESHOLD_ZERO)
     _write_prediction_jsons(game_writer, save_path, RESULTS_JSON, video_data)
     for threshold in THRESHOLDS:
         results_filename = RESULTS_JSON_THRESHOLDED % threshold
         game_writer_thresholded = GameSpottingPredictionsWriter(
             label_map, frame_rate, threshold)
-        _write_prediction_jsons(
-            game_writer_thresholded, save_path, results_filename, video_data)
+        _write_prediction_jsons(game_writer_thresholded, save_path,
+                                results_filename, video_data)
 
 
-def read_game_predictions(
-        json_path: Path, event_dictionary: Dict[str, int],
-        len_half_one: int, len_half_two: int, frame_rate: float,
-        num_classes: int) -> Tuple[np.ndarray, np.ndarray]:
-    detections_half_one = np.full((len_half_one, num_classes), - 1.0)
-    detections_half_two = np.full((len_half_two, num_classes), - 1.0)
+def read_game_predictions(json_path: Path, event_dictionary: Dict[str, int],
+                          len_half_one: int, len_half_two: int,
+                          frame_rate: float,
+                          num_classes: int) -> Tuple[np.ndarray, np.ndarray]:
+    detections_half_one = np.full((len_half_one, num_classes), -1.0)
+    detections_half_two = np.full((len_half_two, num_classes), -1.0)
     with json_path.open("r") as json_file:
         detections_dict = json.load(json_file)
     for annotation in detections_dict[KEY_PREDICTIONS]:
@@ -184,10 +178,10 @@ def read_game_predictions(
     return detections_half_one, detections_half_two
 
 
-def read_game_labels(
-        json_path: Optional[Path], event_dictionary: Dict[str, int],
-        len_half_one: int, len_half_two: int, frame_rate: float,
-        num_classes: int) -> Tuple[LabelsAndValid, LabelsAndValid]:
+def read_game_labels(json_path: Optional[Path], event_dictionary: Dict[str,
+                                                                       int],
+                     len_half_one: int, len_half_two: int, frame_rate: float,
+                     num_classes: int) -> Tuple[LabelsAndValid, LabelsAndValid]:
     """
     Transforms the labels from the json format to a numpy array with size
     (num_frames, num_classes). Every element is set to zero except those
@@ -228,9 +222,9 @@ def read_game_change_labels(
     with json_path.open("r") as json_file:
         labels_dict = json.load(json_file)
     for annotation in labels_dict[KEY_ANNOTATIONS]:
-        _read_game_change_annotation(
-            annotation, event_dictionary, frame_rate, labels_half_one,
-            labels_half_two, len_half_one, len_half_two)
+        _read_game_change_annotation(annotation, event_dictionary, frame_rate,
+                                     labels_half_one, labels_half_two,
+                                     len_half_one, len_half_two)
     return (labels_half_one, True), (labels_half_two, True)
 
 
@@ -250,10 +244,11 @@ def segmentation_targets_from_change_labels(changes: np.ndarray) -> np.ndarray:
     return np.flip(flipped_labels, 0)
 
 
-def _read_game_change_annotation(
-        annotation: Dict, event_dictionary: Dict[str, int], frame_rate: float,
-        labels_half_one: np.ndarray, labels_half_two: np.ndarray,
-        len_half_one: int, len_half_two: int) -> None:
+def _read_game_change_annotation(annotation: Dict, event_dictionary: Dict[str,
+                                                                          int],
+                                 frame_rate: float, labels_half_one: np.ndarray,
+                                 labels_half_two: np.ndarray, len_half_one: int,
+                                 len_half_two: int) -> None:
     event = annotation[KEY_LABEL]
     # Blank camera type labels are often present. SoccerNet code ignores
     # them, so we do the same here.
@@ -294,12 +289,13 @@ def _frame_index_from_position(position: int, frame_rate: float) -> int:
     return round(frame_rate * position / 1000.0)
 
 
-def _write_prediction_jsons(
-        game_writer: GameSpottingPredictionsWriter, save_path: Path,
-        results_filename: str, video_data: List[VideoDatum]) -> None:
+def _write_prediction_jsons(game_writer: GameSpottingPredictionsWriter,
+                            save_path: Path, results_filename: str,
+                            video_data: List[VideoDatum]) -> None:
     # Get the directory containing each game
     relative_game_paths = {
-        video_datum.relative_path.parent for video_datum in video_data}
+        video_datum.relative_path.parent for video_datum in video_data
+    }
     for relative_game_path in tqdm(relative_game_paths):
         game_path = save_path / relative_game_path
         out_path = game_path / results_filename

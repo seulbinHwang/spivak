@@ -68,32 +68,41 @@ def main() -> None:
 
 def _get_command_line_arguments() -> Dict:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--" + Args.INPUT_VIDEOS_DIR,
+                        help='Input directory containing videos',
+                        required=True)
+    parser.add_argument("--" + Args.RESULTS_DIR,
+                        help="Output directory",
+                        required=True)
+    parser.add_argument("--" + Args.MODEL_PATH,
+                        help="Model directory",
+                        required=True)
     parser.add_argument(
-        "--" + Args.INPUT_VIDEOS_DIR, help='Input directory containing videos',
-        required=True)
-    parser.add_argument(
-        "--" + Args.RESULTS_DIR, help="Output directory", required=True)
-    parser.add_argument(
-        "--" + Args.MODEL_PATH, help="Model directory", required=True)
-    parser.add_argument(
-        "--" + Args.FEATURES_MODELS_DIR, required=True,
+        "--" + Args.FEATURES_MODELS_DIR,
+        required=True,
         help="Directory containing models used for extracting video features")
     parser.add_argument(
-        "--" + Args.FEATURES_DIR, required=True,
+        "--" + Args.FEATURES_DIR,
+        required=True,
         help="Directory in which to store intermediate video features")
+    parser.add_argument("--" + Args.LABELS_DIR,
+                        required=False,
+                        help="Directory containing label files, if available")
     parser.add_argument(
-        "--" + Args.LABELS_DIR, required=False,
-        help="Directory containing label files, if available")
-    parser.add_argument(
-        "--" + Args.CONFIG_DIR, type=str, required=True,
-        help="Directory containing a set of config files",)
-    parser.add_argument(
-        "--" + Args.SPLITS_DIR, type=str, required=True,
-        help="Directory for storing the generated split files")
-    parser.add_argument(
-        "--" + Args.FEATURES, required=False,
-        help="What type of features to use", default=EXTRACTOR_TYPE_RESNET_TF2,
-        choices=[EXTRACTOR_TYPE_RESNET_TF2])
+        "--" + Args.CONFIG_DIR,
+        type=str,
+        required=True,
+        help="Directory containing a set of config files",
+    )
+    parser.add_argument("--" + Args.SPLITS_DIR,
+                        type=str,
+                        required=True,
+                        help="Directory for storing the generated split files")
+    parser.add_argument("--" + Args.FEATURES,
+                        required=False,
+                        help="What type of features to use",
+                        default=EXTRACTOR_TYPE_RESNET_TF2,
+                        choices=[EXTRACTOR_TYPE_RESNET_TF2])
     args_dict = vars(parser.parse_args())
     return args_dict
 

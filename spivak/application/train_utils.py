@@ -36,7 +36,7 @@ MIN_SAVE_EPOCHS = 5
 METRIC_ITERATIONS = "iterations"
 METRIC_LEARNING_RATE = "learning_rate"
 TRAINING_STATE_FILE = "last_training_state.pkl"
-LEGACY_FINAL_LEARNING_RATE = 10 ** -6
+LEGACY_FINAL_LEARNING_RATE = 10**-6
 # Setting the memory limit instead of allowing growth allowed for larger
 # batch sizes, while still being able to run the validation process
 # separately. Using memory growth also works well in general, but for some
@@ -87,48 +87,50 @@ def train(args: SharedArgs, manager: Manager) -> None:
     logging.info(training_state)
     last_model_path = os.path.join(model_dir, LAST_MODEL_DIR)
     # Load the trainer.
-    trainer = load_or_create_trainer(
-        last_model_path, args, training_set, validation_set, label_maps)
+    trainer = load_or_create_trainer(last_model_path, args, training_set,
+                                     validation_set, label_maps)
     trainer.model.summary()
     # Set up tensorboard and summary_writer for saving training and validation
     # metrics to disk.
     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     base_log_dir = os.path.join(model_dir, 'logs', current_time)
-    train_tensorboard = _create_tensorboard(
-        trainer.model, "epoch", os.path.join(base_log_dir, "train"))
+    train_tensorboard = _create_tensorboard(trainer.model, "epoch",
+                                            os.path.join(base_log_dir, "train"))
     summary_writer = tf.summary.create_file_writer(
         os.path.join(base_log_dir, "metrics"))
     summary_writer.set_as_default()
     # Save the arguments for this run inside the log dir.
     args.save(base_log_dir)
     # Create legacy learning rate decay class (only applied if needed).
-    should_apply_decay = (args.learning_rate_decay == LEARNING_RATE_DECAY_LEGACY)
+    should_apply_decay = (
+        args.learning_rate_decay == LEARNING_RATE_DECAY_LEGACY)
     legacy_learning_rate_decay = LegacyLearningRateDecay(
         trainer.model, args.learning_rate, args.epochs, should_apply_decay)
     # Create training and validation callbacks.
-    training_callback = TrainingCallback(
-        args, training_state, trainer, summary_writer, args.save_epochs,
-        model_dir, last_model_path, legacy_learning_rate_decay)
+    training_callback = TrainingCallback(args, training_state, trainer,
+                                         summary_writer, args.save_epochs,
+                                         model_dir, last_model_path,
+                                         legacy_learning_rate_decay)
     # The order of the callbacks below is usually important and should be
     # preserved unless there are changes to the callback definitions.
     callbacks = [training_callback]
     if validation_set:
-        validation_callback = ValidationCallback(
-            manager, summary_writer, args, training_state, last_model_path,
-            args.validation_epochs)
+        validation_callback = ValidationCallback(manager, summary_writer, args,
+                                                 training_state,
+                                                 last_model_path,
+                                                 args.validation_epochs)
         callbacks.append(validation_callback)
     callbacks.append(train_tensorboard)
     # There appears to be some memory leak in Keras fit() when using
     # tensorflow.data.Dataset. It seems to help to call it only once.
-    trainer.fit(
-        training_state.epoch, args.epochs, callbacks, args.validation_epochs)
+    trainer.fit(training_state.epoch, args.epochs, callbacks,
+                args.validation_epochs)
 
 
 class TrainingState:
 
-    def __init__(
-            self, epoch: int, iterations: int, best_metric: float,
-            metric_name: Optional[str], best_epoch: int) -> None:
+    def __init__(self, epoch: int, iterations: int, best_metric: float,
+                 metric_name: Optional[str], best_epoch: int) -> None:
         self.epoch = epoch
         self.iterations = iterations
         # For saving the best results
@@ -174,11 +176,10 @@ class TrainingState:
 
 class TrainingCallback(Callback):
 
-    def __init__(
-            self, args: SharedArgs, training_state: TrainingState,
-            trainer: TrainerInterface, summary_writer: SummaryWriter,
-            save_frequency: int, save_path: str, last_model_path: str,
-            legacy_learning_rate_decay: "LegacyLearningRateDecay"):
+    def __init__(self, args: SharedArgs, training_state: TrainingState,
+                 trainer: TrainerInterface, summary_writer: SummaryWriter,
+                 save_frequency: int, save_path: str, last_model_path: str,
+                 legacy_learning_rate_decay: "LegacyLearningRateDecay"):
         super().__init__()
         self._args = args
         self._training_state = training_state
@@ -190,21 +191,20 @@ class TrainingCallback(Callback):
         self._legacy_learning_rate_decay = legacy_learning_rate_decay
 
     def on_epoch_end(self, epoch, logs=None):
-        _update_iterations(
-            self._training_state, self._trainer.model,
-            self._trainer.steps_per_epoch, epoch)
+        _update_iterations(self._training_state, self._trainer.model,
+                           self._trainer.steps_per_epoch, epoch)
         # Do legacy learning rate decay if needed.
         self._legacy_learning_rate_decay.apply_if_needed()
-        learning_rate = _get_learning_rate(
-            self._trainer.model, self._training_state.iterations)
+        learning_rate = _get_learning_rate(self._trainer.model,
+                                           self._training_state.iterations)
         scalars_to_write = {
             METRIC_LEARNING_RATE: learning_rate,
             METRIC_ITERATIONS: self._training_state.iterations
         }
         _write_scalars(self._summary_writer, scalars_to_write, epoch)
         self._training_state.epoch = epoch
-        if (self._save_frequency and epoch != 0
-                and epoch % self._save_frequency == 0):
+        if (self._save_frequency and epoch != 0 and
+                epoch % self._save_frequency == 0):
             self._trainer.save_model(self._last_model_path)
             self._args.save(self._last_model_path)
             self._training_state.save(self._save_path)
@@ -212,14 +212,12 @@ class TrainingCallback(Callback):
 
 
 class ValidationCallback(Callback):
-
     """The validation runs in a separate process to mitigate the related memory
     leak."""
 
-    def __init__(
-            self, manager: Manager, summary_writer: SummaryWriter, args,
-            training_state: "TrainingState", last_model_path,
-            validation_frequency):
+    def __init__(self, manager: Manager, summary_writer: SummaryWriter, args,
+                 training_state: "TrainingState", last_model_path,
+                 validation_frequency):
         super().__init__()
         self._args = args
         self._validation_frequency = validation_frequency
@@ -230,8 +228,8 @@ class ValidationCallback(Callback):
         self._task_is_pending = False
 
     def on_epoch_end(self, epoch, logs=None):
-        if (self._validation_frequency and epoch != 0
-                and epoch % self._validation_frequency == 0):
+        if (self._validation_frequency and epoch != 0 and
+                epoch % self._validation_frequency == 0):
             self._collect_results_and_submit_validation_task(epoch)
 
     def on_train_end(self, logs=None):
@@ -242,10 +240,10 @@ class ValidationCallback(Callback):
         # This process will read the latest models and its state.
         self._collect_results_if_pending()
         if os.path.exists(self._last_model_path):
-            self._manager.input_queue.put(ChildTask(
-                do_exit=False,
-                args=(self._args, self._training_state.best_metric, epoch)
-            ))
+            self._manager.input_queue.put(
+                ChildTask(do_exit=False,
+                          args=(self._args, self._training_state.best_metric,
+                                epoch)))
             self._task_is_pending = True
 
     def _collect_results_if_pending(self):
@@ -261,8 +259,8 @@ class ValidationCallback(Callback):
             self._training_state.metric_name = evaluation.main_metric_name
             self._training_state.best_epoch = validation_result.epoch
         scalars_to_write = evaluation.scalars_for_logging()
-        _write_scalars(
-            self._summary_writer, scalars_to_write, validation_result.epoch)
+        _write_scalars(self._summary_writer, scalars_to_write,
+                       validation_result.epoch)
 
 
 class LegacyLearningRateDecay:
@@ -275,8 +273,9 @@ class LegacyLearningRateDecay:
 
     def apply_if_needed(self):
         if self._should_apply:
-            _legacy_decay_learning_rate(
-                self._model, self._initial_learning_rate, self._epochs)
+            _legacy_decay_learning_rate(self._model,
+                                        self._initial_learning_rate,
+                                        self._epochs)
 
 
 def _set_mixed_precision(should_set_mixed_precision: bool) -> None:
@@ -299,7 +298,7 @@ def _adjust_gpu_memory():
 
 def _create_tensorboard(model: Model, update_freq, log_dir: str):
     tensorboard = tensorflow.keras.callbacks.TensorBoard(
-       log_dir, update_freq=update_freq, profile_batch=PROFILE_BATCH)
+        log_dir, update_freq=update_freq, profile_batch=PROFILE_BATCH)
     tensorboard.set_model(model)
     return tensorboard
 
@@ -312,19 +311,17 @@ def _get_learning_rate(network: Model, step: int):
     return K.get_value(lr_tensor)
 
 
-def _legacy_decay_learning_rate(
-        network: Model, initial_learning_rate: float, epochs: int) -> None:
+def _legacy_decay_learning_rate(network: Model, initial_learning_rate: float,
+                                epochs: int) -> None:
     current_learning_rate = K.get_value(network.optimizer.lr)
     new_learning_rate = (
-            current_learning_rate
-            - (initial_learning_rate - LEGACY_FINAL_LEARNING_RATE) / epochs
-    )
+        current_learning_rate -
+        (initial_learning_rate - LEGACY_FINAL_LEARNING_RATE) / epochs)
     K.set_value(network.optimizer.lr, new_learning_rate)
 
 
-def _update_iterations(
-        training_state: TrainingState, network: Model,
-        steps_per_epoch: int, epoch: int) -> None:
+def _update_iterations(training_state: TrainingState, network: Model,
+                       steps_per_epoch: int, epoch: int) -> None:
     current_iterations = K.get_value(network.optimizer.iterations)
     if current_iterations > training_state.iterations:
         training_state.iterations = current_iterations
@@ -343,13 +340,13 @@ def _update_iterations(
             training_state.broken_iterations_epochs = 0
 
 
-def _write_scalars(
-        summary_writer: SummaryWriter, scalars: Dict[str, Any],
-        epoch: int) -> None:
+def _write_scalars(summary_writer: SummaryWriter, scalars: Dict[str, Any],
+                   epoch: int) -> None:
     with summary_writer.as_default():
         for scalar_name in scalars:
-            tf.summary.scalar(
-                scalar_name, data=scalars[scalar_name], step=epoch)
+            tf.summary.scalar(scalar_name,
+                              data=scalars[scalar_name],
+                              step=epoch)
 
 
 def _garbage_collect():

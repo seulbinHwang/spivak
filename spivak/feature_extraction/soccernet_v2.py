@@ -31,9 +31,8 @@ from spivak.feature_extraction.SoccerNetDataLoader import FrameCV, Frame
 class RawFeatureExtractorInterface(metaclass=ABCMeta):
 
     @abstractmethod
-    def extract_features(
-            self, video_path: str, game_start_time: int, game_end_time: int
-    ) -> np.ndarray:
+    def extract_features(self, video_path: str, game_start_time: int,
+                         game_end_time: int) -> np.ndarray:
         pass
 
 
@@ -46,23 +45,28 @@ class PCAInterface(metaclass=ABCMeta):
 
 class FeatureExtractorResNetTF2(RawFeatureExtractorInterface):
 
-    def __init__(
-            self, model_weights_path: str, grabber="opencv", fps=2.0,
-            image_transform="crop") -> None:
+    def __init__(self,
+                 model_weights_path: str,
+                 grabber="opencv",
+                 fps=2.0,
+                 image_transform="crop") -> None:
         self.grabber = grabber
         self.fps = fps
         self.image_transform = image_transform
         base_model = keras.applications.resnet.ResNet152(
-            include_top=True, weights=model_weights_path,
-            input_tensor=None, input_shape=None, pooling=None, classes=1000)
+            include_top=True,
+            weights=model_weights_path,
+            input_tensor=None,
+            input_shape=None,
+            pooling=None,
+            classes=1000)
         # define model with output after polling layer (dim=2048)
-        self.model = Model(
-            base_model.input, outputs=[base_model.get_layer("avg_pool").output])
+        self.model = Model(base_model.input,
+                           outputs=[base_model.get_layer("avg_pool").output])
         self.model.trainable = False
 
-    def extract_features(
-            self, video_path: str, game_start_time: int, game_end_time: int
-    ) -> np.ndarray:
+    def extract_features(self, video_path: str, game_start_time: int,
+                         game_end_time: int) -> np.ndarray:
         start = None
         video_duration = None
         if game_start_time:
@@ -70,13 +74,17 @@ class FeatureExtractorResNetTF2(RawFeatureExtractorInterface):
         if game_end_time:
             video_duration = game_end_time - game_start_time
         if self.grabber == "skvideo":
-            video_loader = Frame(
-                video_path, FPS=self.fps, transform=self.image_transform,
-                start=start, duration=video_duration)
+            video_loader = Frame(video_path,
+                                 FPS=self.fps,
+                                 transform=self.image_transform,
+                                 start=start,
+                                 duration=video_duration)
         elif self.grabber == "opencv":
-            video_loader = FrameCV(
-                video_path, FPS=self.fps, transform=self.image_transform,
-                start=start, duration=video_duration)
+            video_loader = FrameCV(video_path,
+                                   FPS=self.fps,
+                                   transform=self.image_transform,
+                                   start=start,
+                                   duration=video_duration)
         else:
             raise ValueError(f"Unknown frame grabber: {self.grabber}")
         frames = preprocess_input(video_loader.frames)
@@ -90,9 +98,8 @@ class FeatureExtractorResNetTF2(RawFeatureExtractorInterface):
         features = self.model.predict(frames, batch_size=64, verbose=1)
         prediction_time = time.time() - prediction_start_time
         logging.info(f"feature model prediction time: {prediction_time}")
-        logging.info(
-            f"features {features.shape}, fps="
-            f"{features.shape[0] / video_duration}")
+        logging.info(f"features {features.shape}, fps="
+                     f"{features.shape[0] / video_duration}")
         return features
 
 

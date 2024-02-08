@@ -7,13 +7,12 @@ from typing import Dict
 
 
 class TaskEvaluation(metaclass=ABCMeta):
+    """Defines the evaluation results for any given single task."""
 
-	"""Defines the evaluation results for any given single task."""
+    @abstractmethod
+    def scalars_for_logging(self) -> Dict[str, float]:
+        pass
 
-	@abstractmethod
-	def scalars_for_logging(self) -> Dict[str, float]:
-		pass
-
-	@abstractmethod
-	def summary(self) -> str:
-		pass
+    @abstractmethod
+    def summary(self) -> str:
+        pass

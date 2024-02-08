@@ -25,15 +25,15 @@ class ChildTask:
         self.args = args
 
 
-def manager_function(
-        input_queue: Queue, output_queue: Queue,
-        worker_function: Callable) -> None:
+def manager_function(input_queue: Queue, output_queue: Queue,
+                     worker_function: Callable) -> None:
     # I tried also doing this with a pool (setting maxtasksperchild to 1),
     # but for some unknown reason it would sometimes not work (maybe a
     # deadlock), but I didn't investigate to understand why.
     logging.getLogger().setLevel(logging.ERROR)
-    warnings.filterwarnings(
-        action="ignore", category=UserWarning, module=MODULE_ADDONS_INSTALL)
+    warnings.filterwarnings(action="ignore",
+                            category=UserWarning,
+                            module=MODULE_ADDONS_INSTALL)
     logging.info("MANAGER: initializing")
     worker_result_queue = Queue()
 
@@ -48,8 +48,8 @@ def manager_function(
         do_exit = child_task.do_exit
         logging.info("MANAGER: Got a task")
         if not child_task.do_exit:
-            child = Process(
-                target=worker_function_with_queue, args=child_task.args)
+            child = Process(target=worker_function_with_queue,
+                            args=child_task.args)
             child.start()
             logging.info("MANAGER: Waiting for result")
             output_queue.put(worker_result_queue.get())

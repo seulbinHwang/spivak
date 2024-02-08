@@ -9,11 +9,10 @@ VIDEO_EXTENSIONS = {".mp4", ".avi", ".mkv"}
 
 
 def list_video_paths(input_videos_dir: Path) -> List[Path]:
-    return sorted(
-        [file_path
-         for file_path in input_videos_dir.iterdir()
-         if is_video_path(file_path)]
-    )
+    return sorted([
+        file_path for file_path in input_videos_dir.iterdir()
+        if is_video_path(file_path)
+    ])
 
 
 def is_video_path(video_path: Path) -> bool:

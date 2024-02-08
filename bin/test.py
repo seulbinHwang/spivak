@@ -9,7 +9,6 @@ import logging
 from spivak.application.argument_parser import get_args
 from spivak.application.test_utils import test
 
-
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
     test(get_args())

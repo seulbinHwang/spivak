@@ -39,8 +39,8 @@ def main():
     extractor_type = args[Args.FEATURES]
     features_dir = Path(args[Args.FEATURES_DIR])
     splits_dir = Path(args[Args.SPLITS_DIR])
-    features = _read_soccernet_features(
-        features_dir, splits_dir, extractor_type)
+    features = _read_soccernet_features(features_dir, splits_dir,
+                                        extractor_type)
     # Compute the transform.
     whiten = args[Args.WHITEN]
     print("Creating the PCA transform")
@@ -49,8 +49,8 @@ def main():
     # Write out the PCA transform
     out_path = args[Args.OUT_PATH]
     if not out_path:
-        out_path = _create_pca_file_path(
-            features_dir, extractor_type, N_COMPONENTS, whiten)
+        out_path = _create_pca_file_path(features_dir, extractor_type,
+                                         N_COMPONENTS, whiten)
     print(f"Saving result to {out_path}")
     with open(out_path, "wb") as out_file:
         pickle.dump(incremental_pca, out_file)
@@ -58,46 +58,52 @@ def main():
 
 def _get_command_line_arguments() -> Dict:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--" + Args.OUT_PATH,
+                        help="Optional: output file path",
+                        required=False)
     parser.add_argument(
-        "--" + Args.OUT_PATH, help="Optional: output file path", required=False)
-    parser.add_argument(
-        "--" + Args.FEATURES_DIR, required=True,
+        "--" + Args.FEATURES_DIR,
+        required=True,
         help="Directory in which to store intermediate video features")
-    parser.add_argument(
-        "--" + Args.FEATURES, required=False,
-        help="What type of features to use", default=EXTRACTOR_TYPE_RESNET_TF2,
-        choices=[EXTRACTOR_TYPE_RESNET_TF2])
-    parser.add_argument(
-        "--" + Args.SPLITS_DIR, required=True, type=str,
-        help="Directory containing splits information")
-    parser.add_argument(
-        "--" + Args.WHITEN, help="Whiten the transformation", required=False,
-        action='store_true', dest=Args.WHITEN)
-    parser.add_argument(
-        "--" + Args.NO_WHITEN, help="Don't whiten the transformation",
-        required=False, action='store_false', dest=Args.WHITEN)
+    parser.add_argument("--" + Args.FEATURES,
+                        required=False,
+                        help="What type of features to use",
+                        default=EXTRACTOR_TYPE_RESNET_TF2,
+                        choices=[EXTRACTOR_TYPE_RESNET_TF2])
+    parser.add_argument("--" + Args.SPLITS_DIR,
+                        required=True,
+                        type=str,
+                        help="Directory containing splits information")
+    parser.add_argument("--" + Args.WHITEN,
+                        help="Whiten the transformation",
+                        required=False,
+                        action='store_true',
+                        dest=Args.WHITEN)
+    parser.add_argument("--" + Args.NO_WHITEN,
+                        help="Don't whiten the transformation",
+                        required=False,
+                        action='store_false',
+                        dest=Args.WHITEN)
     parser.set_defaults(**{Args.WHITEN: DEFAULT_WHITEN})
     args_dict = vars(parser.parse_args())
     return args_dict
 
 
-def _read_soccernet_features(
-        features_dir: Path, splits_dir: Path,
-        extractor_type: str) -> np.ndarray:
+def _read_soccernet_features(features_dir: Path, splits_dir: Path,
+                             extractor_type: str) -> np.ndarray:
     game_list = GamePathsReader.read_game_list_v2(splits_dir, SPLIT_KEY_TRAIN)
     feature_name = extractor_type_to_feature_name(extractor_type)
     return read_and_concatenate_features(features_dir, game_list, feature_name)
 
 
-def _create_pca_file_path(
-        features_dir: Path, extractor_type: str, n_components: int,
-        whiten: bool) -> str:
+def _create_pca_file_path(features_dir: Path, extractor_type: str,
+                          n_components: int, whiten: bool) -> str:
     return str(features_dir /
                _create_pca_file_name(extractor_type, n_components, whiten))
 
 
-def _create_pca_file_name(
-        extractor_type: str, n_components: int, whiten: bool) -> str:
+def _create_pca_file_name(extractor_type: str, n_components: int,
+                          whiten: bool) -> str:
     return f"pca_transform_{extractor_type}_{n_components}_whiten_{whiten}.pkl"
 
 

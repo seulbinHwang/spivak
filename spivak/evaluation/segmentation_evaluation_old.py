@@ -52,19 +52,20 @@ Camera_Type_DICTIONARY = {
 }
 
 
-def run_segmentation_evaluation_old(
-        all_predictions, num_classes, list_games, labels_dir, frame_rate):
+def run_segmentation_evaluation_old(all_predictions, num_classes, list_games,
+                                    labels_dir, frame_rate):
     intersection_counts_per_class = np.zeros(num_classes, dtype=np.float32)
     union_counts_per_class = np.zeros(num_classes, dtype=np.float32)
     labels_json = "Labels-cameras.json"
     all_targets = []
     all_labels_paths = [
-        os.path.join(labels_dir, game, labels_json) for game in list_games]
+        os.path.join(labels_dir, game, labels_json) for game in list_games
+    ]
     for game_index, labels_path in enumerate(all_labels_paths):
         len_half1 = len(all_predictions[2 * game_index])
         len_half2 = len(all_predictions[2 * game_index + 1])
-        label_half1, label_half2 = _get_game_labels(
-            len_half1, len_half2, labels_path, frame_rate)
+        label_half1, label_half2 = _get_game_labels(len_half1, len_half2,
+                                                    labels_path, frame_rate)
         targets1 = segmentation_targets_from_change_labels(label_half1)
         targets2 = segmentation_targets_from_change_labels(label_half2)
         all_targets.extend([targets1, targets2])
@@ -95,17 +96,19 @@ def run_segmentation_evaluation_old(
             if U > 0:
                 intersection_counts_per_class[cl] += I
                 union_counts_per_class[cl] += U
-    per_class_iou = np.divide(
-        intersection_counts_per_class, union_counts_per_class)
+    per_class_iou = np.divide(intersection_counts_per_class,
+                              union_counts_per_class)
     mean_iou = np.mean(per_class_iou)
-    f1_macro, f1_micro, f1_manual = calculate_f1_scores(
-        all_targets, all_predictions, num_classes)
+    f1_macro, f1_micro, f1_manual = calculate_f1_scores(all_targets,
+                                                        all_predictions,
+                                                        num_classes)
     return f1_macro, f1_micro, f1_manual, mean_iou, per_class_iou
 
 
 def calculate_f1_scores(all_targets, all_predictions, num_classes):
-    total_targets, total_predictions = _append_function(
-        all_targets, all_predictions, num_classes)
+    total_targets, total_predictions = _append_function(all_targets,
+                                                        all_predictions,
+                                                        num_classes)
     # Go from one-hot targets to class integers.
     groundtruth = np.argmax(total_targets, axis=1)
     int_predictions = np.argmax(total_predictions, axis=1)

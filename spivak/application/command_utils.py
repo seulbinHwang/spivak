@@ -37,10 +37,12 @@ Args = Union[ListArgs, DictArgs]
 
 class Command:
 
-    def __init__(
-            self, description: str, executable: str, arguments: Args,
-            cwd: Optional[str] = None,
-            env_vars: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self,
+                 description: str,
+                 executable: str,
+                 arguments: Args,
+                 cwd: Optional[str] = None,
+                 env_vars: Optional[Dict[str, str]] = None) -> None:
         self.description = description
         self.executable = executable
         self.arguments = arguments
@@ -58,14 +60,12 @@ class Command:
         return subprocess.run(self._as_list(), cwd=self.cwd, env=env)
 
     def command_line_str(self) -> str:
-        return (self.environment_variables_str() +
-                " " +
+        return (self.environment_variables_str() + " " +
                 " ".join(self._as_list()))
 
     def environment_variables_str(self) -> str:
         variables_list = [
-            f"{key}={value}"
-            for key, value in self.env_vars.items()
+            f"{key}={value}" for key, value in self.env_vars.items()
         ]
         return " ".join(variables_list)
 
@@ -104,9 +104,8 @@ def detector_args(detector: str) -> DictArgs:
     return detector_arguments
 
 
-def create_name(
-        parameters: DictArgs, extra_name: str, model_name: str,
-        feature_name: str, protocol: str) -> str:
+def create_name(parameters: DictArgs, extra_name: str, model_name: str,
+                feature_name: str, protocol: str) -> str:
     parameters_string = _parameters_to_string(parameters)
     return (f"{protocol}_{feature_name}_{model_name}_{extra_name}"
             f"_{parameters_string}")
@@ -119,7 +118,8 @@ def print_command_list(commands: List[Command]) -> None:
 
 def _parameters_to_string(parameters: DictArgs) -> str:
     parameters_strings = [
-         _parameter_to_string(key, parameters[key]) for key in parameters]
+        _parameter_to_string(key, parameters[key]) for key in parameters
+    ]
     return "_".join(parameters_strings)
 
 

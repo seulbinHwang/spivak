@@ -35,8 +35,8 @@ def maybe_convert_model_to_sam(model: Model, rho: float, eps: float) -> None:
 
 class SAMModel(Model):
 
-    def __init__(
-            self, main_input, output_tensors, rho: float, eps: float) -> None:
+    def __init__(self, main_input, output_tensors, rho: float,
+                 eps: float) -> None:
         super(SAMModel, self).__init__(main_input, output_tensors)
         self._rho = rho
         self._eps = eps
@@ -54,9 +54,10 @@ class SAMModel(Model):
             y_pred = self(x, training=True)  # Forward pass
             # Compute the loss value
             # (the loss function is configured in `compile()`)
-            loss = self.compiled_loss(
-                y, y_pred, sample_weight=sample_weight,
-                regularization_losses=self.losses)
+            loss = self.compiled_loss(y,
+                                      y_pred,
+                                      sample_weight=sample_weight,
+                                      regularization_losses=self.losses)
 
         # Compute gradients
         trainable_vars = self.trainable_variables
@@ -67,8 +68,8 @@ class SAMModel(Model):
         grad_norm = tf.linalg.global_norm(gradients)
         for i in range(len(trainable_vars)):
             if gradients[i] is not None:
-                e_w = tf.math.scalar_mul(self._rho, gradients[i]) / (
-                        grad_norm + self._eps)
+                e_w = tf.math.scalar_mul(self._rho,
+                                         gradients[i]) / (grad_norm + self._eps)
             else:
                 e_w = tf.math.scalar_mul(0.0, trainable_vars[i])
             trainable_vars[i].assign_add(e_w)
@@ -78,9 +79,10 @@ class SAMModel(Model):
             y_pred = self(x, training=True)  # Forward pass
             # Compute the loss value
             # (the loss function is configured in `compile()`)
-            loss = self.compiled_loss(
-                y, y_pred, sample_weight=sample_weight,
-                regularization_losses=self.losses)
+            loss = self.compiled_loss(y,
+                                      y_pred,
+                                      sample_weight=sample_weight,
+                                      regularization_losses=self.losses)
 
         trainable_vars = self.trainable_variables
         gradients = tape.gradient(loss, trainable_vars)
@@ -91,8 +93,9 @@ class SAMModel(Model):
 
         # Update the metrics.
         # Metrics are configured in `compile()`.
-        self.compiled_metrics.update_state(
-            y, y_pred, sample_weight=sample_weight)
+        self.compiled_metrics.update_state(y,
+                                           y_pred,
+                                           sample_weight=sample_weight)
 
         # Return a dict mapping metric names to current value.
         # Note that it will include the loss (tracked in self.metrics).

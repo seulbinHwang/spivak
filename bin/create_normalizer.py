@@ -60,29 +60,36 @@ def main():
 
 def _get_command_line_arguments() -> Dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--" + Args.OUT_PATH, required=True, type=str,
-        help="Output pickle file path")
-    parser.add_argument(
-        "--" + Args.FEATURES_DIR, required=True, type=str,
-        help="Directory from which to read the video features")
-    parser.add_argument(
-        "--" + Args.SPLITS_DIR, required=True, type=str,
-        help="Directory containing splits information")
-    parser.add_argument(
-        "--" + Args.FEATURE_NAME, required=True, type=str,
-        help="What type of features to read")
-    parser.add_argument(
-        "--" + Args.NORMALIZER, required=True, type=str,
-        choices=[NORMALIZER_STANDARD, NORMALIZER_STANDARD_NO_MEAN,
-                 NORMALIZER_MIN_MAX, NORMALIZER_MAX_ABS],
-        help="Type of the normalizer")
+    parser.add_argument("--" + Args.OUT_PATH,
+                        required=True,
+                        type=str,
+                        help="Output pickle file path")
+    parser.add_argument("--" + Args.FEATURES_DIR,
+                        required=True,
+                        type=str,
+                        help="Directory from which to read the video features")
+    parser.add_argument("--" + Args.SPLITS_DIR,
+                        required=True,
+                        type=str,
+                        help="Directory containing splits information")
+    parser.add_argument("--" + Args.FEATURE_NAME,
+                        required=True,
+                        type=str,
+                        help="What type of features to read")
+    parser.add_argument("--" + Args.NORMALIZER,
+                        required=True,
+                        type=str,
+                        choices=[
+                            NORMALIZER_STANDARD, NORMALIZER_STANDARD_NO_MEAN,
+                            NORMALIZER_MIN_MAX, NORMALIZER_MAX_ABS
+                        ],
+                        help="Type of the normalizer")
     args_dict = vars(parser.parse_args())
     return args_dict
 
 
-def _read_features(
-        features_dir: Path, splits_dir: Path, feature_name: str) -> np.ndarray:
+def _read_features(features_dir: Path, splits_dir: Path,
+                   feature_name: str) -> np.ndarray:
     # Get the list of games from the standard training split. Don't need to
     # involve validation data, since the training features should be enough to
     # give us good statistics.

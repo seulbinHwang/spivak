@@ -53,17 +53,16 @@ class DeltaTrainerHead(TrainerHeadInterface):
     # For each time instant and class, delta corresponds to the parameterized
     # time displacement from that instant to the closest label.
 
-    def __init__(
-            self, delta_predictor_head: DeltaPredictorHeadInterface,
-            weight_creator: WeightCreatorInterface) -> None:
+    def __init__(self, delta_predictor_head: DeltaPredictorHeadInterface,
+                 weight_creator: WeightCreatorInterface) -> None:
         self._radius = delta_predictor_head.radius
         self._num_chunk_frames = delta_predictor_head.num_chunk_frames
         self._num_classes = delta_predictor_head.num_classes
         self._delta_predictor_head = delta_predictor_head
         self._weight_creator = weight_creator
 
-    def video_targets(
-            self, video_labels_from_task: LabelsFromTaskDict) -> np.ndarray:
+    def video_targets(self,
+                      video_labels_from_task: LabelsFromTaskDict) -> np.ndarray:
         video_labels = video_labels_from_task[Task.SPOTTING][INDEX_LABELS]
         non_zeros = np.nonzero(video_labels)
         shape = video_labels.shape
@@ -72,20 +71,20 @@ class DeltaTrainerHead(TrainerHeadInterface):
             video_labels, delta_targets)
         return np.stack([delta_targets, weight_inputs], axis=2)
 
-    def tf_chunk_targets_mapper(
-            self, video_targets_and_weight_inputs, task: Task):
+    def tf_chunk_targets_mapper(self, video_targets_and_weight_inputs,
+                                task: Task):
         valid_task = DeltaTrainerHead._valid_task(task)
         return get_tf_targets_and_weights_mapper(
             video_targets_and_weight_inputs, self._num_chunk_frames,
             self._weight_creator, valid_task)
 
-    def chunk_targets(
-            self, video_targets_and_weight_inputs, start: int,
-            mask: np.ndarray, task: Task) -> np.ndarray:
+    def chunk_targets(self, video_targets_and_weight_inputs, start: int,
+                      mask: np.ndarray, task: Task) -> np.ndarray:
         valid_task = DeltaTrainerHead._valid_task(task)
-        return get_chunk_targets_and_weights(
-            video_targets_and_weight_inputs, start, mask,
-            self._num_chunk_frames, self._weight_creator, valid_task)
+        return get_chunk_targets_and_weights(video_targets_and_weight_inputs,
+                                             start, mask,
+                                             self._num_chunk_frames,
+                                             self._weight_creator, valid_task)
 
     @property
     def video_targets_shape(self):
@@ -106,11 +105,10 @@ class DeltaTrainerHead(TrainerHeadInterface):
 
 class DeltaPredictorHead(DeltaPredictorHeadInterface):
 
-    def __init__(
-            self, name: str, radius: float, delta_loss: "DeltaLoss",
-            num_chunk_frames: int, num_classes: int, weight_decay: float,
-            batch_norm: bool, dropout_rate: float, width: int,
-            num_head_layers: int, zero_init: bool) -> None:
+    def __init__(self, name: str, radius: float, delta_loss: "DeltaLoss",
+                 num_chunk_frames: int, num_classes: int, weight_decay: float,
+                 batch_norm: bool, dropout_rate: float, width: int,
+                 num_head_layers: int, zero_init: bool) -> None:
         self._name = name
         self._delta_loss = delta_loss
         self._radius = radius
@@ -128,10 +126,11 @@ class DeltaPredictorHead(DeltaPredictorHeadInterface):
             self._name, self._weight_decay, self._batch_norm,
             self._dropout_rate, self._width, self._num_head_layers,
             nodes[NODE_PENULTIMATE])
-        return _create_delta_tensor(
-            self._name, self._num_chunk_frames, self._num_classes, 1,
-            self._weight_decay, self._batch_norm, self._dropout_rate,
-            delta_tensor_window_size, self._zero_init, delta_tensor_input)
+        return _create_delta_tensor(self._name, self._num_chunk_frames,
+                                    self._num_classes, 1, self._weight_decay,
+                                    self._batch_norm, self._dropout_rate,
+                                    delta_tensor_window_size, self._zero_init,
+                                    delta_tensor_input)
 
     def post_process(self, delta):
         result = _post_process_delta(delta, self._radius)
@@ -188,9 +187,8 @@ class DeltaLoss:
 
 class DeltaWeightCreator(WeightCreatorInterface):
 
-    def __init__(
-            self, dataset: Dataset, delta_radius: float,
-            positive_weight: float, class_weights: np.ndarray) -> None:
+    def __init__(self, dataset: Dataset, delta_radius: float,
+                 positive_weight: float, class_weights: np.ndarray) -> None:
         num_classes = dataset.num_classes_from_task[Task.SPOTTING]
         positive_counts_per_class = np.zeros(num_classes)
         negative_counts_per_class = np.zeros(num_classes)
@@ -205,19 +203,19 @@ class DeltaWeightCreator(WeightCreatorInterface):
                 positive_counts_per_class, negative_counts_per_class,
                 positive_weight)
         # Element-wise multiplication to take into account the class_weights.
-        self._positive_weight_per_class = (
-                class_weights * positive_weight_per_class)
-        self._negative_weight_per_class = (
-                class_weights * negative_weight_per_class)
+        self._positive_weight_per_class = (class_weights *
+                                           positive_weight_per_class)
+        self._negative_weight_per_class = (class_weights *
+                                           negative_weight_per_class)
         logging.info("Delta positive_weight_per_class")
         logging.info(self._positive_weight_per_class)
         logging.info("Delta negative_weight_per_class")
         logging.info(self._negative_weight_per_class)
 
     def video_weight_inputs(self, video_labels, video_targets):
-        return np.where(
-            video_targets != NEGATIVE_DELTA, self._positive_weight_per_class,
-            self._negative_weight_per_class)
+        return np.where(video_targets != NEGATIVE_DELTA,
+                        self._positive_weight_per_class,
+                        self._negative_weight_per_class)
 
     def tf_chunk_weights(self, chunk_weight_inputs):
         return chunk_weight_inputs
@@ -226,17 +224,17 @@ class DeltaWeightCreator(WeightCreatorInterface):
         return chunk_weight_inputs
 
     @staticmethod
-    def _video_counts(
-            video_labels: np.ndarray,
-            delta_radius: float) -> Tuple[np.ndarray, np.ndarray]:
+    def _video_counts(video_labels: np.ndarray,
+                      delta_radius: float) -> Tuple[np.ndarray, np.ndarray]:
         non_zeros = np.nonzero(video_labels)
         shape = video_labels.shape
-        video_delta_targets = create_delta_targets(
-            non_zeros, delta_radius, shape)
-        video_positive_counts_per_class = np.sum(
-            video_delta_targets != NEGATIVE_DELTA, axis=0)
-        video_negative_counts_per_class = (
-                len(video_delta_targets) - video_positive_counts_per_class)
+        video_delta_targets = create_delta_targets(non_zeros, delta_radius,
+                                                   shape)
+        video_positive_counts_per_class = np.sum(video_delta_targets
+                                                 != NEGATIVE_DELTA,
+                                                 axis=0)
+        video_negative_counts_per_class = (len(video_delta_targets) -
+                                           video_positive_counts_per_class)
         return video_positive_counts_per_class, video_negative_counts_per_class
 
 
@@ -247,8 +245,7 @@ def create_delta_targets(non_zeros, radius: float, shape):
     for frame_index, class_index in zip(frame_indexes, class_indexes):
         # Set the reparameterized delta values.
         delta_range = create_frame_range(frame_index, radius, num_frames)
-        target_reparameterized_deltas = (
-                (frame_index - delta_range) / radius)
+        target_reparameterized_deltas = ((frame_index - delta_range) / radius)
         # Only set the new values if they are smaller than what is already
         # there, so the closest positive example wins.
         delta_selection = np.abs(target_reparameterized_deltas) < np.abs(
@@ -260,6 +257,7 @@ def create_delta_targets(non_zeros, radius: float, shape):
 
 
 def create_huber_base_loss(huber_delta: float):
+
     def huber_base_loss(y_true, y_pred):
         # The y_true and y_pred are expected to be between -1.0 and 1.0. They
         # will get mapped to time intervals according to different radius. I
@@ -268,19 +266,19 @@ def create_huber_base_loss(huber_delta: float):
         # and most outliers will be false positive/negatives that are
         # completely wrong, in which case normalizing for the radius doesn't
         # seem great.
-        huber = Huber(
-            delta=huber_delta, reduction=tf.keras.losses.Reduction.NONE)
+        huber = Huber(delta=huber_delta,
+                      reduction=tf.keras.losses.Reduction.NONE)
         # The division is such that the derivative of the loss for
         # differences larger than huber_delta will be 1.0, independently of
         # huber_delta itself.
         return huber(y_true, y_pred) / huber_delta
+
     return huber_base_loss
 
 
-def _create_delta_tensor(
-        name, num_chunk_frames, num_classes, num_radii, weight_decay,
-        batch_norm, dropout_rate, window_size, zero_init: bool,
-        penultimate: Tensor) -> Tensor:
+def _create_delta_tensor(name, num_chunk_frames, num_classes, num_radii,
+                         weight_decay, batch_norm, dropout_rate, window_size,
+                         zero_init: bool, penultimate: Tensor) -> Tensor:
     # Define a parameterized version of the deltas. In the application code,
     # it will be multiplied by some window size in order to translate it into
     # an actual time or frame delta. Note we use a tanh activation on it,
@@ -290,10 +288,16 @@ def _create_delta_tensor(
         kernel_initializer = tf.keras.initializers.Zeros()
     else:
         kernel_initializer = INITIALIZER_FOR_SIGMOID
-    deltas_convolution = convolution_wrapper(
-        penultimate, num_classes * num_radii, (window_size, 1), (1, 1),
-        "same", weight_decay, batch_norm, dropout_rate,
-        kernel_initializer, name=convolution_name, activation="tanh")
+    deltas_convolution = convolution_wrapper(penultimate,
+                                             num_classes * num_radii,
+                                             (window_size, 1), (1, 1),
+                                             "same",
+                                             weight_decay,
+                                             batch_norm,
+                                             dropout_rate,
+                                             kernel_initializer,
+                                             name=convolution_name,
+                                             activation="tanh")
     reshape = Reshape((num_chunk_frames, num_classes, num_radii), name=name)
     return reshape(deltas_convolution)
 

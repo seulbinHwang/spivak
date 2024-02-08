@@ -63,9 +63,8 @@ def read_segmentation_label_map(config_dir: Path) -> Optional[LabelMap]:
     return LabelMap.read_label_map(segmentation_path)
 
 
-def create_dataset(
-        args: SharedArgs, split_key: str,
-        label_maps: Dict[Task, LabelMap]) -> Dataset:
+def create_dataset(args: SharedArgs, split_key: str,
+                   label_maps: Dict[Task, LabelMap]) -> Dataset:
     datasets = create_datasets(args, [split_key], label_maps)
     assert len(datasets) == 1
     return datasets[0]
@@ -79,11 +78,13 @@ def create_datasets(
             DATASET_TYPE_SOCCERNET_V2_CHALLENGE_VALIDATION,
             DATASET_TYPE_SOCCERNET_V2_CHALLENGE,
             DATASET_TYPE_SOCCERNET_V2_CAMERA_SEGMENTATION,
-            DATASET_TYPE_SOCCERNET_V2_SPOTTING_AND_CAMERA_SEGMENTATION}:
+            DATASET_TYPE_SOCCERNET_V2_SPOTTING_AND_CAMERA_SEGMENTATION
+    }:
         return _create_soccernet_datasets(args, split_keys, label_maps)
     elif args.dataset_type in {
             DATASET_TYPE_CUSTOM_SPOTTING, DATASET_TYPE_CUSTOM_SEGMENTATION,
-            DATASET_TYPE_CUSTOM_SPOTTING_AND_SEGMENTATION}:
+            DATASET_TYPE_CUSTOM_SPOTTING_AND_SEGMENTATION
+    }:
         return _create_custom_datasets(args, split_keys, label_maps)
     else:
         raise ValueError(f"Unknown dataset type: {args.dataset_type}")
@@ -97,8 +98,7 @@ def _create_soccernet_datasets(
 
 
 def _create_soccernet_reader(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap]
-) -> SoccerNetReader:
+        args: SharedArgs, label_maps: Dict[Task, LabelMap]) -> SoccerNetReader:
     soccernet_video_data_reader = create_soccernet_video_data_reader(
         args, label_maps)
     chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
@@ -106,8 +106,8 @@ def _create_soccernet_reader(
 
 
 def create_soccernet_video_data_reader(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap]
-) -> SoccerNetVideoDataReader:
+        args: SharedArgs,
+        label_maps: Dict[Task, LabelMap]) -> SoccerNetVideoDataReader:
     if not args.splits_dir or not args.labels_dir or not args.features_dir:
         raise ValueError(f"Must have splits_dir, labels_dir and features_dir")
     features_dir = dir_str_to_path(args.features_dir)
@@ -117,19 +117,20 @@ def create_soccernet_video_data_reader(
     game_label_reader = GameLabelsFromTaskDictReader(game_one_hot_label_readers)
     splits_dir = dir_str_to_path(args.splits_dir)
     labels_dir = dir_str_to_path(args.labels_dir)
-    game_paths_reader = GamePathsReader(
-        soccernet_type, args.feature_name, features_dir, labels_dir, splits_dir)
+    game_paths_reader = GamePathsReader(soccernet_type, args.feature_name,
+                                        features_dir, labels_dir, splits_dir)
     return SoccerNetVideoDataReader(game_label_reader, game_paths_reader)
 
 
 def _create_game_one_hot_label_readers(
-        soccernet_type: str, frame_rate: float,
-        label_maps: Dict[Task, LabelMap]
-) -> Dict[Task, GameOneHotLabelReaderInterface]:
+    soccernet_type: str, frame_rate: float,
+    label_maps: Dict[Task,
+                     LabelMap]) -> Dict[Task, GameOneHotLabelReaderInterface]:
     game_one_hot_label_readers = {}
     if soccernet_type in {
             SOCCERNET_TYPE_TWO_CAMERA_SEGMENTATION,
-            SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION}:
+            SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION
+    }:
         game_one_hot_label_readers[Task.SEGMENTATION] = \
             GameOneHotCameraChangeLabelReader(
                 frame_rate, label_maps[Task.SEGMENTATION].num_classes())
@@ -137,7 +138,8 @@ def _create_game_one_hot_label_readers(
             SOCCERNET_TYPE_ONE, SOCCERNET_TYPE_TWO,
             SOCCERNET_TYPE_TWO_CHALLENGE_VALIDATION,
             SOCCERNET_TYPE_TWO_CHALLENGE,
-            SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION}:
+            SOCCERNET_TYPE_TWO_SPOTTING_AND_CAMERA_SEGMENTATION
+    }:
         game_one_hot_label_readers[Task.SPOTTING] = \
             GameOneHotSpottingLabelReader(
                 soccernet_type, frame_rate,
@@ -163,27 +165,28 @@ def _get_soccernet_type(dataset_type: str) -> str:
         raise ValueError(f"Not a SoccerNet dataset type: {dataset_type}")
 
 
-def _create_custom_datasets(
-        args: SharedArgs, split_keys: List[str],
-        label_maps: Dict[Task, LabelMap]) -> List[Dataset]:
+def _create_custom_datasets(args: SharedArgs, split_keys: List[str],
+                            label_maps: Dict[Task, LabelMap]) -> List[Dataset]:
     tasks = _tasks_from_custom_dataset_type(args.dataset_type)
     dataset_reader = _create_custom_dataset_reader(args, label_maps, tasks)
     split_paths_provider = _create_split_paths_provider(args, tasks)
-    return [_create_custom_dataset(
-        dataset_reader, split_paths_provider, split_key)
-        for split_key in split_keys]
+    return [
+        _create_custom_dataset(dataset_reader, split_paths_provider, split_key)
+        for split_key in split_keys
+    ]
 
 
-def _create_custom_dataset_reader(
-        args: SharedArgs, label_maps: Dict[Task, LabelMap],
-        tasks: List[Task]) -> CustomDatasetReader:
+def _create_custom_dataset_reader(args: SharedArgs, label_maps: Dict[Task,
+                                                                     LabelMap],
+                                  tasks: List[Task]) -> CustomDatasetReader:
     config_dir = dir_str_to_path(args.config_dir)
     video_label_readers = {}
     for task in tasks:
         label_groups_path = config_dir / LABEL_GROUP_JSON_FILES[task]
         optional_label_groups = read_label_groups(label_groups_path)
-        label_file_reader = GenericLabelFileReader(
-            label_maps[task], optional_label_groups, args.frame_rate)
+        label_file_reader = GenericLabelFileReader(label_maps[task],
+                                                   optional_label_groups,
+                                                   args.frame_rate)
         video_label_readers[task] = VideoLabelReader(label_file_reader)
     chunk_frames = math.floor(args.frame_rate * args.chunk_duration)
     return CustomDatasetReader(video_label_readers, chunk_frames)
@@ -203,8 +206,8 @@ def _tasks_from_custom_dataset_type(dataset_type: str) -> List[Task]:
     return tasks
 
 
-def _create_split_paths_provider(
-        args: SharedArgs, tasks: List[Task]) -> SplitPathsProvider:
+def _create_split_paths_provider(args: SharedArgs,
+                                 tasks: List[Task]) -> SplitPathsProvider:
     features_dir = dir_str_to_path(args.features_dir)
     features_paths = create_features_paths(features_dir, args.feature_name)
     labels_dir_dict = dict()
@@ -218,18 +221,17 @@ def _create_split_paths_provider(
     return SplitPathsProvider(features_paths, labels_dir_dict, splits)
 
 
-def _create_splits(
-        args: SharedArgs, features_paths: List[Path],
-        labels_dir_dict: Dict[Task, Path]) -> Splits:
+def _create_splits(args: SharedArgs, features_paths: List[Path],
+                   labels_dir_dict: Dict[Task, Path]) -> Splits:
     splits_dir = Path(args.splits_dir)
     splits_dir.mkdir(exist_ok=True)
     splits_path = splits_dir / SPLITS_CSV
     return load_or_create_splits(features_paths, labels_dir_dict, splits_path)
 
 
-def _create_custom_dataset(
-        dataset_reader: CustomDatasetReader,
-        split_paths_provider: SplitPathsProvider, split_key: str) -> Dataset:
+def _create_custom_dataset(dataset_reader: CustomDatasetReader,
+                           split_paths_provider: SplitPathsProvider,
+                           split_key: str) -> Dataset:
     split_features_paths, split_labels_path_dicts = \
         split_paths_provider.provide(split_key)
     return dataset_reader.read(split_features_paths, split_labels_path_dicts)

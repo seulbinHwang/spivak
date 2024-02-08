@@ -20,9 +20,8 @@ class SegmentationEvaluation(TaskEvaluation):
     METRIC_MEAN_IOU = "mean_iou"
     METRIC_IOU = "iou"
 
-    def __init__(
-            self, mean_iou: float, per_class_iou: np.ndarray,
-            label_map: LabelMap) -> None:
+    def __init__(self, mean_iou: float, per_class_iou: np.ndarray,
+                 label_map: LabelMap) -> None:
         self.mean_iou = mean_iou
         self.per_class_iou = per_class_iou
         self.label_map = label_map
@@ -30,8 +29,8 @@ class SegmentationEvaluation(TaskEvaluation):
     def scalars_for_logging(self) -> Dict[str, float]:
         scalars = {
             f"{SegmentationEvaluation.METRIC_IOU}_"
-            f"{self.label_map.int_to_label[c]}": class_iou
-            for c, class_iou in enumerate(self.per_class_iou)
+            f"{self.label_map.int_to_label[c]}":
+                class_iou for c, class_iou in enumerate(self.per_class_iou)
         }
         scalars[SegmentationEvaluation.METRIC_MEAN_IOU] = self.mean_iou
         return scalars
@@ -63,9 +62,10 @@ def create_segmentation_evaluation(
     return SegmentationEvaluation(mean_iou, per_class_iou, label_map)
 
 
-def create_segmentation_evaluation_old(
-        all_segmentations: List[np.ndarray], label_map: LabelMap,
-        list_games, labels_dir, frame_rate) -> SegmentationEvaluation:
+def create_segmentation_evaluation_old(all_segmentations: List[np.ndarray],
+                                       label_map: LabelMap, list_games,
+                                       labels_dir,
+                                       frame_rate) -> SegmentationEvaluation:
     # Replicates the SoccerNet code evaluation as of August 23, 2022. That code
     # had some small problems, which are noted inside individual comments in
     # segmentation_evaluation_old.py.
@@ -80,8 +80,8 @@ def _run_segmentation_evaluation(all_predictions, all_labels, num_classes):
     intersection_counts_per_class = np.zeros(num_classes, dtype=np.float32)
     union_counts_per_class = np.zeros(num_classes, dtype=np.float32)
     all_targets = [
-        segmentation_targets_from_change_labels(labels)
-        for labels in all_labels]
+        segmentation_targets_from_change_labels(labels) for labels in all_labels
+    ]
     for (video_predictions, video_targets) in zip(all_predictions, all_targets):
         # Convert from one-hot to integers.
         video_predictions_integers = video_predictions.argmax(axis=1)
@@ -89,15 +89,17 @@ def _run_segmentation_evaluation(all_predictions, all_labels, num_classes):
         for class_index in range(num_classes):
             target_mask = (video_targets_integers == class_index)
             prediction_mask = (video_predictions_integers == class_index)
-            intersection_count = np.sum(
-                np.logical_and(target_mask, prediction_mask), dtype=np.float32)
-            union_count = np.sum(
-                np.logical_or(target_mask, prediction_mask), dtype=np.float32)
+            intersection_count = np.sum(np.logical_and(target_mask,
+                                                       prediction_mask),
+                                        dtype=np.float32)
+            union_count = np.sum(np.logical_or(target_mask, prediction_mask),
+                                 dtype=np.float32)
             intersection_counts_per_class[class_index] += intersection_count
             union_counts_per_class[class_index] += union_count
-    per_class_iou = np.divide(
-        intersection_counts_per_class, union_counts_per_class)
+    per_class_iou = np.divide(intersection_counts_per_class,
+                              union_counts_per_class)
     mean_iou = float(np.mean(per_class_iou))
-    f1_macro, f1_micro, f1_manual = calculate_f1_scores(
-        all_targets, all_predictions, num_classes)
+    f1_macro, f1_micro, f1_manual = calculate_f1_scores(all_targets,
+                                                        all_predictions,
+                                                        num_classes)
     return f1_macro, f1_micro, f1_manual, mean_iou, per_class_iou

@@ -24,9 +24,10 @@ def main() -> None:
     args = get_args()
     features_dir = Path(args.features_dir)
     results_dir = Path(args.results_dir)
-    video_feature_infos = create_video_feature_infos(
-        [features_dir], [args.feature_name], results_dir,
-        PROJECTED_FEATURE_NAME)
+    video_feature_infos = create_video_feature_infos([features_dir],
+                                                     [args.feature_name],
+                                                     results_dir,
+                                                     PROJECTED_FEATURE_NAME)
     print(f"Found {len(video_feature_infos)} video feature files")
     results_dir.mkdir(parents=True, exist_ok=True)
     make_output_directories(video_feature_infos)
@@ -36,8 +37,8 @@ def main() -> None:
         _create_projected_features_file(video_feature_info, projector)
 
 
-def _create_projected_features_file(
-        video_feature_info: VideoFeatureInfo, projector: Projector) -> None:
+def _create_projected_features_file(video_feature_info: VideoFeatureInfo,
+                                    projector: Projector) -> None:
     input_path = video_feature_info.input_paths[0]
     features = np.load(str(input_path))
     projected = projector.project(features)

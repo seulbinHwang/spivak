@@ -35,9 +35,9 @@ def main() -> None:
 def _create_manager() -> Manager:
     input_queue = Queue()
     output_queue = Queue()
-    manager_process = Process(
-        target=manager_function, args=(
-            input_queue, output_queue, _import_and_compute_validation_result))
+    manager_process = Process(target=manager_function,
+                              args=(input_queue, output_queue,
+                                    _import_and_compute_validation_result))
     return Manager(manager_process, input_queue, output_queue)
 
 

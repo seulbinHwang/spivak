@@ -30,8 +30,9 @@ def main() -> None:
             raise ValueError(f"Input directory failed is_dir(): {input_dir}")
     output_name = args[Args.OUTPUT_NAME]
     output_dir = Path(args[Args.OUTPUT_DIR])
-    video_infos = create_video_feature_infos(
-        input_dirs, [output_name] * len(input_dirs), output_dir, output_name)
+    video_infos = create_video_feature_infos(input_dirs,
+                                             [output_name] * len(input_dirs),
+                                             output_dir, output_name)
     print(f"Found {len(video_infos)} video result files")
     output_dir.mkdir(parents=True, exist_ok=True)
     make_output_directories(video_infos)
@@ -46,7 +47,8 @@ def _create_combined_file(video_info: VideoFeatureInfo) -> None:
         results_list.append(input_results)
     min_num_frames = min(results.shape[0] for results in results_list)
     clipped_results_list = [
-        clip_frames(results, min_num_frames) for results in results_list]
+        clip_frames(results, min_num_frames) for results in results_list
+    ]
     combined_results = np.stack(clipped_results_list, axis=2)
     print(f"Writing combined results to {video_info.output_path}")
     np.save(str(video_info.output_path), combined_results)
@@ -54,17 +56,20 @@ def _create_combined_file(video_info: VideoFeatureInfo) -> None:
 
 def _get_command_line_arguments() -> Dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--" + Args.INPUT_DIRS,
-        help="One or more input directories containing results",
-        nargs="+", required=True, type=str)
-    parser.add_argument(
-        "--" + Args.OUTPUT_NAME,
-        help="Which output type to read and write", required=True, type=str,
-        choices=[OUTPUT_CONFIDENCE, OUTPUT_DELTA])
-    parser.add_argument(
-        "--" + Args.OUTPUT_DIR, required=True,
-        help="Directory for the output features", type=str)
+    parser.add_argument("--" + Args.INPUT_DIRS,
+                        help="One or more input directories containing results",
+                        nargs="+",
+                        required=True,
+                        type=str)
+    parser.add_argument("--" + Args.OUTPUT_NAME,
+                        help="Which output type to read and write",
+                        required=True,
+                        type=str,
+                        choices=[OUTPUT_CONFIDENCE, OUTPUT_DELTA])
+    parser.add_argument("--" + Args.OUTPUT_DIR,
+                        required=True,
+                        help="Directory for the output features",
+                        type=str)
     args_dict = vars(parser.parse_args())
     return args_dict
 

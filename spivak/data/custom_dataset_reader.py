@@ -21,9 +21,8 @@ LABEL_FILE_KEY_TIME = "time"
 
 class CustomDatasetReader:
 
-    def __init__(
-            self, video_label_readers: Dict[Task, "VideoLabelReader"],
-            chunk_frames: int) -> None:
+    def __init__(self, video_label_readers: Dict[Task, "VideoLabelReader"],
+                 chunk_frames: int) -> None:
         self._video_label_readers = video_label_readers
         self._chunk_frames = chunk_frames
 
@@ -32,23 +31,24 @@ class CustomDatasetReader:
         # Create relative paths, used later for writing results.
         relative_paths = [
             Path(name_from_path(features_path))
-            for features_path in features_paths]
+            for features_path in features_paths
+        ]
         num_frames_list = [
-            read_num_frames(features_path) for features_path in features_paths]
+            read_num_frames(features_path) for features_path in features_paths
+        ]
         # Directly read video labels into memory, since they don't take up that
         # much space.
-        labels_from_task_list = [
-            {
-                task: self._video_label_readers[task].read_video_labels(
+        labels_from_task_list = [{
+            task:
+                self._video_label_readers[task].read_video_labels(
                     labels_path_dict[task], num_frames)
-                for task in labels_path_dict
-            }
-            for labels_path_dict, num_frames in zip(
-                labels_path_dicts, num_frames_list)
-        ]
+            for task in labels_path_dict
+        }
+                                 for labels_path_dict, num_frames in zip(
+                                     labels_path_dicts, num_frames_list)]
         video_data = [
-            DefaultVideoDatum(
-                features_path, relative_path, labels_from_task, num_frames)
+            DefaultVideoDatum(features_path, relative_path, labels_from_task,
+                              num_frames)
             for features_path, labels_from_task, relative_path, num_frames in
             zip(features_paths, labels_from_task_list, relative_paths,
                 num_frames_list)
@@ -57,7 +57,8 @@ class CustomDatasetReader:
         input_shape = (self._chunk_frames, num_features, 1)
         num_classes_from_task = {
             task: self._video_label_readers[task].num_classes
-            for task in self._video_label_readers}
+            for task in self._video_label_readers
+        }
         return Dataset(video_data, input_shape, num_classes_from_task)
 
 
@@ -67,18 +68,16 @@ class VideoLabelReader:
         self.num_classes: int = label_file_reader.num_classes
         self._label_file_reader = label_file_reader
 
-    def read_video_labels(
-            self, labels_path: Optional[Path],
-            features_len: int) -> LabelsAndValid:
+    def read_video_labels(self, labels_path: Optional[Path],
+                          features_len: int) -> LabelsAndValid:
         if not labels_path:
             return self._empty_labels_and_valid(features_len)
         if not labels_path.exists():
             logging.warning(
                 f"Could not find labels path, skipping labels: {labels_path}")
             return self._empty_labels_and_valid(features_len)
-        return (
-            self._label_file_reader.read_one_hot(labels_path, features_len),
-            True)
+        return (self._label_file_reader.read_one_hot(labels_path,
+                                                     features_len), True)
 
     def _empty_labels_and_valid(self, length: int) -> LabelsAndValid:
         return np.zeros((length, self.num_classes)), False
@@ -100,10 +99,9 @@ class GenericLabelFileReader(LabelFileReaderInterface):
 
     EXCESS_SECONDS_FOR_WARNING = 1.0
 
-    def __init__(
-            self, label_map: LabelMap,
-            label_groups: Optional[Dict[str, List[str]]],
-            frame_rate: float) -> None:
+    def __init__(self, label_map: LabelMap,
+                 label_groups: Optional[Dict[str, List[str]]],
+                 frame_rate: float) -> None:
         self._label_map = label_map
         self._label_groups = label_groups
         self._frame_rate = frame_rate
@@ -119,12 +117,12 @@ class GenericLabelFileReader(LabelFileReaderInterface):
             frame = round(self._frame_rate * time_in_seconds)
             # Check if the current label is too far off from the end of the
             # video and give out a warning if so.
-            frame_excess_in_seconds = (
-                    (frame - last_frame_index) / self._frame_rate)
+            frame_excess_in_seconds = ((frame - last_frame_index) /
+                                       self._frame_rate)
             # The last frames sometimes do not get decoded, so we allow for
             # some slack here.
-            if (frame_excess_in_seconds >
-                    GenericLabelFileReader.EXCESS_SECONDS_FOR_WARNING):
+            if (frame_excess_in_seconds
+                    > GenericLabelFileReader.EXCESS_SECONDS_FOR_WARNING):
                 video_approximate_duration = features_len / self._frame_rate
                 logging.error(
                     f"Ignoring label with too large a time in json file "
@@ -150,10 +148,12 @@ class GenericLabelFileReader(LabelFileReaderInterface):
             potential_labels.extend(group_labels)
         valid_labels = [
             label for label in potential_labels
-            if label in self._label_map.label_to_int]
+            if label in self._label_map.label_to_int
+        ]
         invalid_labels = [
             label for label in potential_labels
-            if label not in self._label_map.label_to_int]
+            if label not in self._label_map.label_to_int
+        ]
         for invalid_label in invalid_labels:
             logging.warning(
                 f"Ignoring label {invalid_label}, which is not in the "

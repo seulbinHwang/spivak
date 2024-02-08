@@ -16,9 +16,8 @@ from spivak.models.predictor import PredictorInterface, VideoOutputs
 
 class DeltaDensePredictor(PredictorInterface):
 
-    def __init__(
-            self, dense_predictor: DensePredictor,
-            confidence_dir: Path) -> None:
+    def __init__(self, dense_predictor: DensePredictor,
+                 confidence_dir: Path) -> None:
         self._dense_predictor = dense_predictor
         self._confidence_dir = confidence_dir
 
@@ -34,9 +33,9 @@ class DeltaDensePredictor(PredictorInterface):
             video_outputs, throw_out_delta=False)
         return video_outputs
 
-    def predict_video_and_save(
-            self, video_datum: VideoDatum, nms: FlexibleNonMaximumSuppression,
-            base_path: Path) -> None:
+    def predict_video_and_save(self, video_datum: VideoDatum,
+                               nms: FlexibleNonMaximumSuppression,
+                               base_path: Path) -> None:
         video_outputs = self.predict_video(video_datum)
         DensePredictor.save_predictions(video_outputs, nms, base_path)
         DensePredictor.save_labels(video_datum, base_path)
@@ -65,4 +64,5 @@ def _fix_video_outputs_frames(video_outputs: VideoOutputs) -> VideoOutputs:
     min_num_frames = min(output.shape[0] for output in video_outputs.values())
     return {
         output_name: clip_frames(output, min_num_frames)
-        for output_name, output in video_outputs.items()}
+        for output_name, output in video_outputs.items()
+    }

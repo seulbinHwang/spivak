@@ -17,8 +17,8 @@ from spivak.models.dense_predictor import DensePredictor, \
 from spivak.models.non_maximum_suppression import FlexibleNonMaximumSuppression
 from spivak.models.predictor import PredictorInterface, VideoOutputs
 
-AveragingPredictor = Union[
-    "ConfidenceAveragingPredictor", "DeltaAveragingPredictor"]
+AveragingPredictor = Union["ConfidenceAveragingPredictor",
+                           "DeltaAveragingPredictor"]
 
 
 class ConfidenceAveragingPredictor(PredictorInterface):
@@ -29,17 +29,22 @@ class ConfidenceAveragingPredictor(PredictorInterface):
 
     def predict_video(self, video_datum: VideoDatum) -> VideoOutputs:
         if self._use_logits:
-            confidence = expit(np.average(
-                logit(video_datum.features), axis=2, weights=self.weights))
+            confidence = expit(
+                np.average(logit(video_datum.features),
+                           axis=2,
+                           weights=self.weights))
         else:
-            confidence = np.average(
-                video_datum.features, axis=2, weights=self.weights)
+            confidence = np.average(video_datum.features,
+                                    axis=2,
+                                    weights=self.weights)
         return {
-            OUTPUT_CONFIDENCE: confidence, OUTPUT_DETECTION_SCORE: confidence}
+            OUTPUT_CONFIDENCE: confidence,
+            OUTPUT_DETECTION_SCORE: confidence
+        }
 
-    def predict_video_and_save(
-            self, video_datum: VideoDatum, nms: FlexibleNonMaximumSuppression,
-            base_path: Path) -> None:
+    def predict_video_and_save(self, video_datum: VideoDatum,
+                               nms: FlexibleNonMaximumSuppression,
+                               base_path: Path) -> None:
         video_outputs = self.predict_video(video_datum)
         DensePredictor.save_predictions(video_outputs, nms, base_path)
         DensePredictor.save_labels(video_datum, base_path)
@@ -54,9 +59,8 @@ class ConfidenceAveragingPredictor(PredictorInterface):
 
 class DeltaAveragingPredictor(PredictorInterface):
 
-    def __init__(
-            self, weights: np.ndarray, confidence_dir: Path,
-            use_arcs: bool, delta_radius: float) -> None:
+    def __init__(self, weights: np.ndarray, confidence_dir: Path,
+                 use_arcs: bool, delta_radius: float) -> None:
         self.weights = weights
         self._confidence_dir = confidence_dir
         self._use_arcs = use_arcs
@@ -64,13 +68,15 @@ class DeltaAveragingPredictor(PredictorInterface):
 
     def predict_video(self, video_datum: VideoDatum) -> VideoOutputs:
         if self._use_arcs:
-            delta = self._delta_radius * np.tanh(np.average(
-                np.arctanh(video_datum.features / self._delta_radius),
-                axis=2, weights=self.weights
-            ))
+            delta = self._delta_radius * np.tanh(
+                np.average(np.arctanh(
+                    video_datum.features / self._delta_radius),
+                           axis=2,
+                           weights=self.weights))
         else:
-            delta = np.average(
-                video_datum.features, axis=2, weights=self.weights)
+            delta = np.average(video_datum.features,
+                               axis=2,
+                               weights=self.weights)
         confidence_path = DeltaDensePredictor.confidence_path(
             self._confidence_dir, video_datum.relative_path)
         confidence = np.load(str(confidence_path))
@@ -84,9 +90,9 @@ class DeltaAveragingPredictor(PredictorInterface):
             video_outputs, throw_out_delta=False)
         return video_outputs
 
-    def predict_video_and_save(
-            self, video_datum: VideoDatum, nms: FlexibleNonMaximumSuppression,
-            base_path: Path) -> None:
+    def predict_video_and_save(self, video_datum: VideoDatum,
+                               nms: FlexibleNonMaximumSuppression,
+                               base_path: Path) -> None:
         video_outputs = self.predict_video(video_datum)
         DensePredictor.save_predictions(video_outputs, nms, base_path)
         DensePredictor.save_labels(video_datum, base_path)

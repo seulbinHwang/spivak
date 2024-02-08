@@ -21,9 +21,9 @@ class PredictorInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def predict_video_and_save(
-            self, video_datum: VideoDatum, nms: FlexibleNonMaximumSuppression,
-            base_path: Path) -> None:
+    def predict_video_and_save(self, video_datum: VideoDatum,
+                               nms: FlexibleNonMaximumSuppression,
+                               base_path: Path) -> None:
         pass
 
     @abstractmethod
