@@ -53,7 +53,6 @@ EXTRAS_REQUIRES = {
     ]
 }
 
-
 # find_namespace_packages:
 #   지정된 패턴에 맞는 네임스페이스 패키지를 찾아 리스트로 반환하는 함수
 #   쉽게 얘기하면, 패키지 디렉토리("spivak") 내의 모든 패키지들을 찾아 리스트로 반환.
@@ -74,10 +73,11 @@ bin_script = glob.glob(os.path.join(SCRIPTS_DIR, "*.py"))
 # setup: Python 패키지를 빌드하고 배포하기 위한 모듈
 # 패키지의 메타데이터와 의존성 정보 등을 정의/usr/bin/python3 --version
 setup(
-    name=PACKAGE_DIR, # "spivak"
-    packages=packages, # ["spivak.feature_extraction", ...]
-    python_requires=PYTHON_REQUIRES, # ">=3.6"
-    install_requires=INSTALL_REQUIRES, # ["numpy>=1.18.5,<1.23.0", ...]
-    extras_require=EXTRAS_REQUIRES, # {"av": ["av~=10.0.0"]} # pip install spivak[av]
-    scripts=bin_script, # ["bin/profile_validation.py", ...] # 패키지와 함께 설치될 스크립트들
+    name=PACKAGE_DIR,  # "spivak"
+    packages=packages,  # ["spivak.feature_extraction", ...]
+    python_requires=PYTHON_REQUIRES,  # ">=3.6"
+    install_requires=INSTALL_REQUIRES,  # ["numpy>=1.18.5,<1.23.0", ...]
+    extras_require=
+    EXTRAS_REQUIRES,  # {"av": ["av~=10.0.0"]} # pip install spivak[av]
+    scripts=bin_script,  # ["bin/profile_validation.py", ...] # 패키지와 함께 설치될 스크립트들
 )
