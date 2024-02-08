@@ -7,6 +7,10 @@ import argparse
 # data/features
 
 parser = argparse.ArgumentParser(description="Download SoccerNet data")
+parser.add_argument("--download_features",
+                    default=True,
+                    type=bool,
+                    help="Download the features")
 parser.add_argument("--download_video",
                     default=True,
                     type=bool,
@@ -22,22 +26,6 @@ args = parser.parse_args()
 mySoccerNetDownloader = SoccerNetDownloader(
     LocalDirectory="./soccernet_dataset/")
 
-# Download SoccerNet features -> data/features
-mySoccerNetDownloader.downloadGames(
-    files=["1_ResNET_TF2.npy", "2_ResNET_TF2.npy"],
-    split=["train", "valid", "test"])  # download Features
-mySoccerNetDownloader.downloadGames(
-    files=["1_ResNET_TF2_PCA512.npy", "2_ResNET_TF2_PCA512.npy"],
-    split=["train", "valid", "test"])  # download Features reduced with PCA
-mySoccerNetDownloader.downloadGames(
-    files=["1_baidu_soccer_embeddings.npy", "2_baidu_soccer_embeddings.npy"],
-    split=["train", "valid", "test"]
-)  # download Frame Embeddings from https://github.com/baidu-research/vidpress-sports
-
-# Download SoccerNet labels
-mySoccerNetDownloader.downloadGames(files=["Labels-v2.json"],
-                                    split=["train", "valid",
-                                           "test"])  # download labels SN v2
 
 # Download SoccerNet videos
 if args.download_video:
@@ -47,6 +35,25 @@ if args.download_video:
     mySoccerNetDownloader.downloadGames(
         files=["1_224p.mkv", "2_224p.mkv"],
         split=["train", "valid", "test", "challenge"])
+
+if args.download_features:
+    # Download SoccerNet features -> data/features
+    mySoccerNetDownloader.downloadGames(
+        files=["1_ResNET_TF2.npy", "2_ResNET_TF2.npy"],
+        split=["train", "valid", "test"])  # download Features
+    mySoccerNetDownloader.downloadGames(
+        files=["1_ResNET_TF2_PCA512.npy", "2_ResNET_TF2_PCA512.npy"],
+        split=["train", "valid", "test"])  # download Features reduced with PCA
+    mySoccerNetDownloader.downloadGames(
+        files=["1_baidu_soccer_embeddings.npy", "2_baidu_soccer_embeddings.npy"],
+        split=["train", "valid", "test"]
+    )  # download Frame Embeddings from https://github.com/baidu-research/vidpress-sports
+
+    # Download SoccerNet labels
+    mySoccerNetDownloader.downloadGames(files=["Labels-v2.json"],
+                                        split=["train", "valid",
+                                               "test"])  # download labels SN v2
+
 
 import os
 """

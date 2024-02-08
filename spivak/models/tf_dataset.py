@@ -32,10 +32,10 @@ BATCH_PREFETCH_SIZE = 1
 BATCH_MIXUP_LAMBDA = False
 
 TFDataset = tf.data.Dataset
-
 """
 brew link python@3.8 --force
 """
+
 
 def create_tf_merged_batch_dataset(
         batch_datasets: List[TFDataset]) -> TFDataset:
@@ -315,6 +315,7 @@ def _tf_mixup_batch_head_targets(batch_head_targets, permutation, lambdas,
     # the actual targets/labels are mixed.
     return (targets_lambdas * batch_head_targets +
             (1.0 - targets_lambdas) * shuffled_batch_head_targets)
+
 
 """
 위 코드는 TensorFlow와 TensorFlow Probability를 사용하여 
