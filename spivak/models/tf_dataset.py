@@ -33,6 +33,9 @@ BATCH_MIXUP_LAMBDA = False
 
 TFDataset = tf.data.Dataset
 
+"""
+brew link python@3.8 --force
+"""
 
 def create_tf_merged_batch_dataset(
         batch_datasets: List[TFDataset]) -> TFDataset:
@@ -312,3 +315,51 @@ def _tf_mixup_batch_head_targets(batch_head_targets, permutation, lambdas,
     # the actual targets/labels are mixed.
     return (targets_lambdas * batch_head_targets +
             (1.0 - targets_lambdas) * shuffled_batch_head_targets)
+
+"""
+위 코드는 TensorFlow와 TensorFlow Probability를 사용하여 
+    비디오 데이터 처리 및 모델 훈련을 위한 다양한 기능을 구현한 것
+주요 내용은 다음과 같습니다:
+
+### 데이터셋 처리 및 가공
+- **가변적인 데이터 처리**: 
+    여러 비디오 데이터셋에서 정보를 추출하고, 각 비디오에 대한 처리를 수행 
+    여기서는 비디오의 특정 부분(청크)을 선택하고, 이를 모델 학습에 사용할 배치로 구성
+- **데이터셋 캐싱 및 셔플링**: 
+    데이터 로딩 성능을 개선하기 위해 데이터셋을 캐시에 저장하고, 
+    학습 데이터의 다양성을 보장하기 위해 셔플링을 적용
+- **Mixup 데이터 증강**: 
+    Mixup은 학습 데이터의 다양성을 늘리고, 모델의 일반화 성능을 향상시키는 데이터 증강 기법
+    코드에서는 배치 단위로 Mixup을 적용하며, 각 예제마다 람다 값을 다르게 적용하는 방식을 사용
+
+### 텐서플로우 데이터 API 활용
+- **`tf.data.Dataset` 활용**: 
+    TensorFlow의 `tf.data` API를 사용하여 효율적인 데이터 파이프라인을 구축
+    이를 통해 입력 데이터를 효율적으로 처리하고, 모델 학습에 적합한 형태로 변환
+- **프리페칭과 병렬 처리**: 
+    데이터 로딩 및 전처리 과정에서 발생할 수 있는 병목 현상을 줄이기 위해 
+    프리페칭과 병렬 처리 기법을 사용
+        pre-fetching은 학습에 사용될 데이터를 미리 로딩하여 대기시간을 줄이는 방식
+    이는 CPU와 GPU 간의 효율적인 작업 분배를 통해 학습 성능을 개선
+
+### 모델 학습 관련 기능
+- **가변적인 배치 생성**: 
+    다양한 소스에서 온 비디오 데이터를 처리하여 학습에 사용할 배치를 동적으로 생성
+    이 과정에서 `tf.data.experimental.choose_from_datasets` 함수를 사용하여 
+        여러 데이터셋 중에서 선택합니다.
+- **Mixup 구현**: 
+    Mixup 기법을 통해 입력 데이터와 타겟 레이블을 선형적으로 조합합니다. 
+    이는 모델의 일반화 능력을 향상시키는 데 도움이 됩니다.
+
+### 구조 및 인터페이스
+- 코드는 TensorFlow 기반의 비디오 처리 및 학습 파이프라인을 구성하기 위한 여러 함수와 클래스를 정의
+- 특히, `TrainerHeadInterface`와 같은 인터페이스를 통해 다양한 학습 헤드를 관리하고, 
+    비디오 데이터 처리 로직을 추상화
+- 학습 헤  드
+- 머신러닝 모델의 일부로, 특정 작업(예: 분류, 회귀, 객체 감지 등)을 위해 최종 출력을 생성하는 구성요소
+
+전반적으로, 이 코드는 비디오 데이터를 효율적으로 처리하고, 
+    TensorFlow를 사용한 딥러닝 모델 학습을 위한 고급 기술을 적용하는 방법을 보여줍니다. 
+Mixup과 같은 데이터 증강 기법과, 
+    `tf.data` API를 활용한 성능 최적화 방법은 대규모 비디오 데이터셋을 다룰 때 특히 유용
+"""

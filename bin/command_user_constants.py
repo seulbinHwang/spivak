@@ -1,7 +1,9 @@
 # Copyright 2023, Yahoo Inc.
 # Licensed under the Apache License, Version 2.0.
 # See the accompanying LICENSE file for terms.
-
+""" Low memory setup을 위해선, 아래 실시
+MEMORY_SETUP = MEMORY_SETUP_64GB
+"""
 # Options for memory usage setups.
 MEMORY_SETUP_256GB = "256"
 MEMORY_SETUP_64GB = "64"
